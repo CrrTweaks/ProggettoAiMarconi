@@ -1,0 +1,92 @@
+version: "3.9"
+
+services:
+  # ──────────────── Postgres (with pgvector) ────────────────
+  postgres:
+    image: ankane/pgvector:latest
+    container_name: aiws-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: aischool
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d aischool"]
+      interval: 10s
+      retries: 5
+
+  # ──────────────── Node.js Backend ────────────────
+  backend-node:
+    build:
+      context: .
+      dockerfile: docker/node.Dockerfile
+    container_name: aiws-backend-node
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/aischool
+      AI_SERVICE_URL: http://backend-ai:8000
+      NODE_HOST: 0.0.0.0
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend-node:/app
+      - /app/node_modules
+
+  # ──────────────── FastAPI AI Backend ────────────────
+  backend-ai:
+    build:
+      context: .
+      dockerfile: docker/ai.Dockerfile
+    container_name: aiws-backend-ai
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/aischool
+      OLLAMA_HOST: http://host.docker.internal:11434
+      AI_HOST: 0.0.0.0
+    ports:
+      - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend-ai:/app
+      - ai_uploads:/app/uploads
+
+  # ──────────────── Frontend ────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      target: dev
+    container_name: aiws-frontend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      VITE_API_URL: http://localhost:4000
+      VITE_AI_URL: http://localhost:8000
+      VITE_WS_URL: http://localhost:4000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend-node
+      - backend-ai
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:
+  ai_uploads:
