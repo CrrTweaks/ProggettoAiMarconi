@@ -6,6 +6,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from loguru import logger
 
 from app.core.config import settings
 from app.schemas.chat import RagQueryRequest, RagQueryResponse, RagSource
@@ -55,17 +56,27 @@ async def rag_query(req: RagQueryRequest):
     if not req.query or not req.query.strip():
         raise HTTPException(400, "query obbligatoria")
 
-    sources = await rag_service.retrieve(
-        user_id=req.user_id,
-        query=req.query,
-        top_k=req.top_k,
-        document_ids=req.document_ids,
-    )
-    answer = await rag_service.answer_with_context(
-        query=req.query,
-        sources=sources,
-        model=req.model,
-    )
+    # Allarga il contesto per richieste "ampie" (quiz, riassunti, spiegazioni)
+    q_lower = req.query.lower()
+    wide_kw = ("quiz", "domande", "test", "verifica", "esercizi", "riassunt",
+               "riassumi", "sintesi", "schema", "spiega", "spiegami", "interroga")
+    effective_top_k = max(req.top_k, 12) if any(k in q_lower for k in wide_kw) else req.top_k
+
+    try:
+        sources = await rag_service.retrieve(
+            user_id=req.user_id,
+            query=req.query,
+            top_k=effective_top_k,
+            document_ids=req.document_ids,
+        )
+        answer = await rag_service.answer_with_context(
+            query=req.query,
+            sources=sources,
+            model=req.model,
+        )
+    except Exception as exc:
+        logger.exception("RAG query failed")
+        raise HTTPException(500, f"RAG query failed: {exc}")
     return RagQueryResponse(
         answer=answer,
         sources=[

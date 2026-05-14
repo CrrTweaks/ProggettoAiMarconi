@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 
 import PageHeader from "@/components/shared/PageHeader";
 import EmptyState from "@/components/shared/EmptyState";
+import QuizRenderer from "@/components/shared/QuizRenderer";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -404,6 +405,11 @@ export default function AIChat() {
 
 function Bubble({ message, onSpeak }) {
   const isUser = message.role === "user";
+  const isQuiz =
+    !isUser &&
+    !!message.content &&
+    /(^|\n)\s*#{0,3}\s*Quiz\s*:/i.test(message.content) &&
+    /Domanda\s+\d+/i.test(message.content);
   return (
     <motion.div
       initial={{ opacity: 0, y: 4 }}
@@ -417,16 +423,22 @@ function Bubble({ message, onSpeak }) {
       )}
       <div
         className={cn(
-          "max-w-[75%] rounded-2xl px-4 py-2.5 text-sm",
+          "rounded-2xl px-4 py-2.5 text-sm",
           isUser
-            ? "bg-primary/15 text-fg ring-1 ring-primary/30 rounded-br-md"
-            : "bg-elevated/70 text-fg rounded-bl-md",
+            ? "max-w-[75%] bg-primary/15 text-fg ring-1 ring-primary/30 rounded-br-md"
+            : isQuiz
+              ? "w-full max-w-[calc(100%-3rem)] bg-elevated/70 text-fg rounded-bl-md"
+              : "max-w-[75%] bg-elevated/70 text-fg rounded-bl-md",
         )}
       >
         <div className="prose prose-invert prose-sm max-w-none prose-p:my-1.5 prose-pre:my-2 prose-headings:my-2">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {message.content || (isUser ? "" : "…")}
-          </ReactMarkdown>
+          {isQuiz ? (
+            <QuizRenderer content={message.content} />
+          ) : (
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {message.content || (isUser ? "" : "…")}
+            </ReactMarkdown>
+          )}
         </div>
         {!isUser && message.sources?.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">

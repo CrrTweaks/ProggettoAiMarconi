@@ -55,7 +55,12 @@ async def index_pdf(
 ) -> dict:
     pages = extract_pdf_text(file_path)
     if not pages:
-        raise ValueError("PDF appears to contain no extractable text.")
+        raise ValueError(
+            "PDF appears to contain no extractable text. "
+            "Possible causes: (1) scanned/image-only PDF without OCR, "
+            "(2) corrupted file, or (3) text in unsupported encoding. "
+            "Try a PDF with selectable text."
+        )
 
     chunks = chunk_pages(pages)
     logger.info(f"PDF '{filename}': {len(pages)} pages → {len(chunks)} chunks")
@@ -105,19 +110,120 @@ async def retrieve(
     async with get_conn() as conn:
         async with conn.cursor() as cur:
             await cur.execute(
-                """SELECT * FROM match_pdf_chunks(%s, %s, %s, %s)""",
+                """SELECT * FROM match_pdf_chunks(%s::vector, %s, %s, %s)""",
                 (qemb, top_k, user_param, doc_param),
             )
             return await cur.fetchall()
 
 
 # ───────────────────── Answer generation ─────────────────────
-SYSTEM_RAG = (
-    "Sei un assistente allo studio AI. Rispondi alla domanda dell'utente usando SOLO i "
-    "brani di contesto forniti quando pertinenti. Se il contesto non contiene la risposta, dillo "
-    "onestamente. Cita sempre i numeri di pagina tra parentesi quadre come [p.3]. "
-    "Rispondi SEMPRE e SOLO in italiano."
-)
+SYSTEM_RAG_BASE = """Sei un tutor scolastico AI esperto. Rispondi SEMPRE e SOLO in italiano, usando ESCLUSIVAMENTE le informazioni presenti nei brani di contesto forniti.
+
+REGOLE GENERALI:
+- Se il contesto non contiene abbastanza informazioni, dillo chiaramente invece di inventare.
+- Cita SEMPRE le pagine di riferimento usando il formato [p.N] (es. [p.3], [p.7-8]).
+- Usa Markdown per strutturare la risposta: titoli (##, ###), elenchi puntati/numerati, **grassetto** per i termini chiave, tabelle quando utile, e blocchi di codice per formule o codice.
+- Sii chiaro, didattico e conciso. Evita ripetizioni e frasi vuote.
+- Non inserire mai disclaimer del tipo "come modello AI"."""
+
+SYSTEM_RAG_QUIZ = """
+
+MODALITÀ: GENERAZIONE QUIZ
+Genera un quiz didattico ben strutturato basato esclusivamente sul contenuto fornito.
+
+FORMATO OBBLIGATORIO (Markdown puro, NIENTE tag HTML come <details> o <summary>):
+
+## Quiz: <titolo argomento>
+
+### Domanda 1 — <tipo: scelta multipla / vero-falso / aperta breve>
+**D:** <testo della domanda>
+- A) <opzione>
+- B) <opzione>
+- C) <opzione>
+- D) <opzione>
+
+**Risposta corretta:** <lettera> — <breve spiegazione> [p.N]
+
+---
+
+### Domanda 2 — ...
+(continua con lo stesso schema)
+
+REGOLE STRETTE SUL FORMATO:
+- Ogni domanda DEVE iniziare con `### Domanda N — <tipo>` (tre cancelletti, numero, trattino lungo —, tipo).
+- La risposta DEVE essere su una singola riga che inizia con `**Risposta corretta:**`.
+- NON usare mai `<details>`, `<summary>` o altro HTML: il frontend renderizza un'interfaccia interattiva a partire dal Markdown.
+- Per domande aperte (senza opzioni A–D) ometti il blocco delle opzioni e nella riga risposta usa `**Risposta corretta:** — <testo della risposta> [p.N]` (lascia vuoto il posto della lettera).
+
+LINEE GUIDA CONTENUTO:
+- Genera 5–8 domande di difficoltà crescente, salvo diversa richiesta dell'utente.
+- Mescola tipi: scelta multipla (4 opzioni con UNA sola corretta e distrattori plausibili), vero/falso, e 1–2 domande aperte brevi.
+- Ogni domanda DEVE avere la fonte [p.N] nella riga risposta.
+- Se il contesto è insufficiente per N domande, genera meno domande ma di qualità.
+- ACCURATEZZA TECNICA: per domande su protocolli di rete e informatica, assicurati che la risposta sia tecnicamente corretta in base al contesto fornito.
+  * Esempi: IP è connectionless e NON garantisce consegna né integrità dei dati (lo fa TCP). UDP è connectionless. TCP è connection-oriented e garantisce affidabilità.
+  * Per domande vero/falso, la risposta deve essere inequivocabile. Se l'affermazione è falsa, la risposta corretta è Falso (o B se l'opzione B è "Falso").
+  * Se una domanda vero/falso non ha opzioni A/B, usa il formato standard: A) Vero / B) Falso."""
+
+SYSTEM_RAG_SUMMARY = """
+
+MODALITÀ: RIASSUNTO / SINTESI
+Produci un riassunto strutturato e gerarchico del materiale.
+
+FORMATO:
+## <Titolo argomento>
+
+### 🎯 Idee chiave
+- punto 1 [p.N]
+- punto 2 [p.N]
+
+### 📚 Concetti principali
+**Concetto A** [p.N]: spiegazione concisa.
+**Concetto B** [p.N]: spiegazione concisa.
+
+### 🔗 Collegamenti / Conclusioni
+Sintesi finale che lega i concetti."""
+
+SYSTEM_RAG_EXPLAIN = """
+
+MODALITÀ: SPIEGAZIONE DIDATTICA
+Spiega l'argomento come faresti con uno studente, partendo dalle basi.
+
+FORMATO:
+## <Argomento>
+
+### 💡 In breve
+1–2 frasi che riassumono l'idea centrale [p.N].
+
+### 📖 Spiegazione passo-passo
+Paragrafi numerati o elencati, con esempi concreti dal testo.
+
+### 🧩 Esempio pratico
+Un esempio tratto o ispirato al contenuto [p.N].
+
+### ⚠️ Errori comuni / Note
+Eventuali precisazioni utili."""
+
+
+def _detect_intent(query: str) -> str:
+    """Classifica l'intento dell'utente per scegliere il prompt giusto."""
+    q = query.lower()
+    quiz_kw    = ("quiz", "domande", "test", "verifica", "esercizi", "interroga", "interrogami", "fammi un test")
+    summary_kw = ("riassunt", "riassumi", "sintesi", "sintetizza", "schema", "punti chiave", "riepilog")
+    explain_kw = ("spiega", "spiegazione", "spiegami", "cos'è", "cosa è", "come funziona", "perché", "perche")
+    if any(k in q for k in quiz_kw):    return "quiz"
+    if any(k in q for k in summary_kw): return "summary"
+    if any(k in q for k in explain_kw): return "explain"
+    return "default"
+
+
+def _system_prompt_for(intent: str) -> str:
+    extra = {
+        "quiz":    SYSTEM_RAG_QUIZ,
+        "summary": SYSTEM_RAG_SUMMARY,
+        "explain": SYSTEM_RAG_EXPLAIN,
+    }.get(intent, "")
+    return SYSTEM_RAG_BASE + extra
 
 
 async def answer_with_context(
@@ -126,16 +232,29 @@ async def answer_with_context(
     model: Optional[str] = None,
     history: Optional[List[dict]] = None,
 ) -> str:
+    intent = _detect_intent(query)
     if not sources:
-        ctx = "(nessun contesto pertinente trovato)"
+        ctx = "(nessun contesto pertinente trovato nei PDF dell'utente)"
     else:
-        ctx = "\n\n".join(
-            f"[p.{s['page']}] {s['content']}" for s in sources
+        ctx = "\n\n---\n\n".join(
+            f"[p.{s['page']}]\n{s['content']}" for s in sources
         )
+
+    options = {
+        "temperature": 0.3 if intent == "quiz" else 0.5,
+        "num_ctx": 8192,
+    }
+
     history = history or []
     messages = [
-        {"role": "system", "content": SYSTEM_RAG},
+        {"role": "system", "content": _system_prompt_for(intent)},
         *history,
-        {"role": "user",   "content": f"Contesto:\n{ctx}\n\nDomanda: {query}"},
+        {
+            "role": "user",
+            "content": (
+                f"### Contesto estratto dai PDF\n{ctx}\n\n"
+                f"### Richiesta dell'utente\n{query}"
+            ),
+        },
     ]
-    return await ollama.chat(messages, model=model)
+    return await ollama.chat(messages, model=model, options=options)

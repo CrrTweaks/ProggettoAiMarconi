@@ -6,15 +6,31 @@ from pathlib import Path
 import speech_recognition as sr
 from gtts import gTTS
 from loguru import logger
+from pydub import AudioSegment
+
+
+def _convert_to_wav(file_bytes: bytes, suffix: str = ".webm") -> bytes:
+    """Convert any audio format (webm, mp3, etc.) to WAV bytes."""
+    try:
+        audio = AudioSegment.from_file(io.BytesIO(file_bytes), format=suffix.lstrip("."))
+        buf = io.BytesIO()
+        audio.export(buf, format="wav")
+        return buf.getvalue()
+    except Exception:
+        # If conversion fails, assume it's already WAV
+        return file_bytes
 
 
 def transcribe_audio(file_bytes: bytes, lang: str = "it-IT") -> str:
-    """Convert raw audio bytes (wav/flac/aiff) to text using Google STT (offline-friendly fallback)."""
+    """Convert raw audio bytes (any format) to text using Google STT."""
     recognizer = sr.Recognizer()
+
+    # Convert webm/opus/etc to wav if needed
+    wav_bytes = _convert_to_wav(file_bytes)
 
     # write to a temp file because speech_recognition expects a file path
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-        tmp.write(file_bytes)
+        tmp.write(wav_bytes)
         tmp_path = tmp.name
 
     try:

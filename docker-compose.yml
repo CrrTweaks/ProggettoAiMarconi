@@ -22,7 +22,6 @@ services:
       retries: 5
 
   # ──────────────── Node.js Backend ────────────────
-  # Uses host network so it can reach backend-ai (also on host network).
   backend-node:
     build:
       context: .
@@ -30,10 +29,11 @@ services:
     container_name: aiws-backend-node
     restart: unless-stopped
     env_file: .env
-    network_mode: host
+    ports:
+      - "4000:4000"
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/aischool
-      AI_SERVICE_URL: http://localhost:8000
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/aischool
+      AI_SERVICE_URL: http://backend-ai:8000
       NODE_HOST: 0.0.0.0
       NODE_PORT: 4000
     depends_on:
@@ -44,8 +44,6 @@ services:
       - /app/node_modules
 
   # ──────────────── FastAPI AI Backend ────────────────
-  # Uses host network so it can reach the natively-installed Ollama on
-  # localhost:11434 (firewall blocks the docker bridge -> host gateway route).
   backend-ai:
     build:
       context: .
@@ -53,10 +51,11 @@ services:
     container_name: aiws-backend-ai
     restart: unless-stopped
     env_file: .env
-    network_mode: host
+    ports:
+      - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/aischool
-      OLLAMA_HOST: http://localhost:11434
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/aischool
+      OLLAMA_HOST: http://host.docker.internal:11434
       OLLAMA_DEFAULT_MODEL: mistral
       AI_HOST: 0.0.0.0
       AI_PORT: 8000
