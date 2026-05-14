@@ -1,6 +1,4 @@
-// ════════════════════════════════════════════════════════════════
-//  Lessons controller
-// ════════════════════════════════════════════════════════════════
+// Controller lezioni
 import { query } from "../config/db.js";
 import { HttpError, asyncHandler } from "../middleware/error.js";
 

@@ -24,7 +24,7 @@ export default function AIFloatingPanel() {
       setTimeout(() => scrollRef.current?.scrollTo({ top: 1e9 }), 50);
   }, [aiPanelOpen, messages.length]);
 
-  // Cmd/Ctrl + J shortcut
+  // Scorciatoia Cmd/Ctrl + J
   useEffect(() => {
     const onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
@@ -73,7 +73,7 @@ export default function AIFloatingPanel() {
 
   return (
     <>
-      {/* Floating launcher (only when panel closed) */}
+      {/* Lanciatore fluttuante (solo quando il pannello e chiuso) */}
       <AnimatePresence>
         {!aiPanelOpen && (
           <motion.button

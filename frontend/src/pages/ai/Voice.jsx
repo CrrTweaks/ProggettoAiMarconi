@@ -114,7 +114,7 @@ export default function VoicePage() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* STT */}
+        {/* Speech to text */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -200,7 +200,7 @@ export default function VoicePage() {
           </Button>
         </motion.div>
 
-        {/* TTS */}
+        {/* Text to speech */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}

@@ -1,4 +1,4 @@
-"""RAG pipeline · PDF text extraction → chunking → embeddings → pgvector → retrieval."""
+"""Pipeline RAG: estrazione testo da PDF, segmentazione, embeddings, pgvector, recupero."""
 from pathlib import Path
 from typing import List, Optional
 from uuid import UUID
@@ -12,9 +12,9 @@ from app.core.db import get_conn
 from app.core.ollama_client import ollama
 
 
-# ───────────────────── PDF extraction ─────────────────────
+# Estrazione PDF
 def extract_pdf_text(path: str) -> List[dict]:
-    """Return [{ 'page': i, 'text': str }, ...] (pages with non-empty text)."""
+    """Restituisce pagine con testo non vuoto sotto forma di lista di dizionari."""
     reader = PdfReader(path)
     out: List[dict] = []
     for i, page in enumerate(reader.pages, start=1):
@@ -28,7 +28,7 @@ def extract_pdf_text(path: str) -> List[dict]:
     return out
 
 
-# ───────────────────── Chunking ─────────────────────
+# Segmentazione
 def chunk_pages(pages: List[dict]) -> List[dict]:
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=settings.CHUNK_SIZE,
@@ -46,7 +46,7 @@ def chunk_pages(pages: List[dict]) -> List[dict]:
     return chunks
 
 
-# ───────────────────── Indexing ─────────────────────
+# Indicizzazione
 async def index_pdf(
     user_id: UUID,
     file_path: str,
@@ -77,7 +77,7 @@ async def index_pdf(
             row = await cur.fetchone()
             doc_id = row["id"]
 
-            # Embed + insert chunks
+            # Genera embedding e inserisce i chunk
             for ch in chunks:
                 emb = await ollama.embed(ch["content"])
                 await cur.execute(
@@ -96,7 +96,7 @@ async def index_pdf(
     return {"id": str(doc_id), "filename": filename, "pages": len(pages), "chunks": len(chunks)}
 
 
-# ───────────────────── Retrieval ─────────────────────
+# Recupero
 async def retrieve(
     user_id: Optional[UUID],
     query: str,
@@ -116,7 +116,7 @@ async def retrieve(
             return await cur.fetchall()
 
 
-# ───────────────────── Answer generation ─────────────────────
+# Generazione risposta
 SYSTEM_RAG_BASE = """Sei un tutor scolastico AI esperto. Rispondi SEMPRE e SOLO in italiano, usando ESCLUSIVAMENTE le informazioni presenti nei brani di contesto forniti.
 
 REGOLE GENERALI:
@@ -206,7 +206,7 @@ Eventuali precisazioni utili."""
 
 
 def _detect_intent(query: str) -> str:
-    """Classifica l'intento dell'utente per scegliere il prompt giusto."""
+    """Classifica l intento dell utente per scegliere il prompt corretto."""
     q = query.lower()
     quiz_kw    = ("quiz", "domande", "test", "verifica", "esercizi", "interroga", "interrogami", "fammi un test")
     summary_kw = ("riassunt", "riassumi", "sintesi", "sintetizza", "schema", "punti chiave", "riepilog")

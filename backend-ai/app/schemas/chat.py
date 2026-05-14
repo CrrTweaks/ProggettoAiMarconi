@@ -1,10 +1,10 @@
-"""Pydantic models for chat / RAG / concept-map / voice."""
+"""Modelli Pydantic per chat, RAG, mappe concettuali e voce."""
 from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
 from uuid import UUID
 
 
-# ─────────── Chat ───────────
+# Chat
 class ChatMessage(BaseModel):
     role: Literal["system", "user", "assistant"]
     content: str
@@ -25,7 +25,7 @@ class ChatResponse(BaseModel):
     sources: List[dict] = Field(default_factory=list)
 
 
-# ─────────── RAG ───────────
+# RAG
 class RagQueryRequest(BaseModel):
     user_id:      Optional[UUID]      = None
     query:        str
@@ -47,7 +47,7 @@ class RagQueryResponse(BaseModel):
     sources: List[RagSource]
 
 
-# ─────────── Concept Map ───────────
+# Mappa concettuale
 class ConceptMapRequest(BaseModel):
     user_id:       Optional[UUID] = None
     title:         Optional[str]  = None
@@ -76,13 +76,13 @@ class ConceptMapResponse(BaseModel):
     edges:  List[ConceptEdge]
 
 
-# ─────────── Voice ───────────
+# Voce
 class TTSRequest(BaseModel):
     text: str
     lang: str = "it"
 
 
-# ─────────── Suggest ───────────
+# Suggerimenti
 class WorkloadDay(BaseModel):
     day: str
     homework: int = 0

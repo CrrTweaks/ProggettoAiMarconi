@@ -1,4 +1,4 @@
-"""Async PostgreSQL connection pool (psycopg 3) with pgvector support."""
+"""Pool di connessioni PostgreSQL asincrone (psycopg 3) con supporto pgvector."""
 from contextlib import asynccontextmanager
 from typing import AsyncIterator, Optional
 
@@ -15,7 +15,7 @@ _pool: Optional[AsyncConnectionPool] = None
 
 
 async def _configure(conn: psycopg.AsyncConnection) -> None:
-    """Per-connection setup: dict rows + pgvector adapter."""
+    """Configurazione per connessione: righe dict e adattatore pgvector."""
     await register_vector_async(conn)
 
 

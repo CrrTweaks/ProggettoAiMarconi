@@ -1,6 +1,4 @@
-// ════════════════════════════════════════════════════════════════
-//  Interrogations controller
-// ════════════════════════════════════════════════════════════════
+// Controller interrogazioni
 import { query } from "../config/db.js";
 import { HttpError, asyncHandler } from "../middleware/error.js";
 import { emitToUser } from "../services/socket.js";

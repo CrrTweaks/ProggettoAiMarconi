@@ -1,4 +1,4 @@
-"""/rag · upload PDF, query against indexed corpus."""
+"""Carica PDF e interroga il corpus indicizzato."""
 import os
 import uuid
 from pathlib import Path
@@ -56,7 +56,7 @@ async def rag_query(req: RagQueryRequest):
     if not req.query or not req.query.strip():
         raise HTTPException(400, "query obbligatoria")
 
-    # Allarga il contesto per richieste "ampie" (quiz, riassunti, spiegazioni)
+    # Allarga il contesto per richieste ampie come quiz, riassunti e spiegazioni
     q_lower = req.query.lower()
     wide_kw = ("quiz", "domande", "test", "verifica", "esercizi", "riassunt",
                "riassumi", "sintesi", "schema", "spiega", "spiegami", "interroga")

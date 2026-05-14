@@ -1,4 +1,4 @@
-"""/concept-map · build a concept-map graph from text or a PDF."""
+"""Crea una mappa concettuale sotto forma di grafo da testo o da un PDF."""
 from fastapi import APIRouter, HTTPException
 from loguru import logger
 

@@ -1,6 +1,4 @@
-// ════════════════════════════════════════════════════════════════
-//  /auth · register / login / refresh / logout / me
-// ════════════════════════════════════════════════════════════════
+// Route autenticazione: registrazione, login, refresh, logout e profilo
 import { Router } from "express";
 import { body } from "express-validator";
 import rateLimit from "express-rate-limit";

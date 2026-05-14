@@ -1,16 +1,14 @@
-// ════════════════════════════════════════════════════════════════
-//  AI School Workspace · Node.js Express Server (entry-point)
-// ════════════════════════════════════════════════════════════════
-import 'dotenv/config';
-import http from 'http';
-import { app } from './app.js';
-import { initSocket } from './services/socket.js';
-import { logger } from './config/logger.js';
-import { env } from './config/env.js';
+// Entry point del server Node.js Express per AI School Workspace
+import "dotenv/config";
+import http from "http";
+import { app } from "./app.js";
+import { initSocket } from "./services/socket.js";
+import { logger } from "./config/logger.js";
+import { env } from "./config/env.js";
 
 const server = http.createServer(app);
 
-// Bootstrap Socket.io
+// Avvia Socket.io
 initSocket(server);
 
 server.listen(env.PORT, env.HOST, () => {
@@ -19,12 +17,16 @@ server.listen(env.PORT, env.HOST, () => {
   logger.info(`   ↳ AI service:  ${env.AI_SERVICE_URL}`);
 });
 
-// Graceful shutdown
+// Arresto controllato
 const shutdown = (signal) => {
   logger.warn(`${signal} received. Closing server...`);
   server.close(() => process.exit(0));
 };
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT',  () => shutdown('SIGINT'));
-process.on('unhandledRejection', (err) => logger.error({ err }, 'unhandledRejection'));
-process.on('uncaughtException',  (err) => logger.error({ err }, 'uncaughtException'));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("unhandledRejection", (err) =>
+  logger.error({ err }, "unhandledRejection"),
+);
+process.on("uncaughtException", (err) =>
+  logger.error({ err }, "uncaughtException"),
+);

@@ -1,27 +1,28 @@
-// ════════════════════════════════════════════════════════════════
-//  Calendar controller · aggregate homework / exams / interrogations / lessons
-// ════════════════════════════════════════════════════════════════
-import { query } from '../config/db.js';
-import { asyncHandler } from '../middleware/error.js';
+// Controller calendario: aggrega compiti, verifiche, interrogazioni e lezioni
+import { query } from "../config/db.js";
+import { asyncHandler } from "../middleware/error.js";
 
 /**
  * GET /calendar/events?from=YYYY-MM-DD&to=YYYY-MM-DD&class_id=...
- * Returns a unified list of events across homework / exams / interrogations / lessons.
+ * Restituisce una lista unificata di eventi tra compiti, verifiche, interrogazioni e lezioni.
  */
 export const events = asyncHandler(async (req, res) => {
   const { from, to, class_id } = req.query;
-  const fromDate = from || new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
-  const toDate   = to   || new Date(Date.now() + 60 * 86400_000).toISOString().slice(0, 10);
+  const fromDate =
+    from || new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
+  const toDate =
+    to || new Date(Date.now() + 60 * 86400_000).toISOString().slice(0, 10);
   const userId = req.user.id;
 
   const params = [userId, fromDate, toDate];
-  const classFilter = class_id ? ' AND c.id = $4' : '';
+  const classFilter = class_id ? " AND c.id = $4" : "";
   if (class_id) params.push(class_id);
 
-  // We restrict to classes the current user is in (or owns), unless admin.
-  const userClasses = req.user.role === 'admin'
-    ? `(SELECT id FROM classes WHERE deleted_at IS NULL${class_id ? ' AND id=$4' : ''})`
-    : `(SELECT c.id FROM classes c
+  // Limita alle classi dell utente corrente o a quelle che possiede, salvo admin
+  const userClasses =
+    req.user.role === "admin"
+      ? `(SELECT id FROM classes WHERE deleted_at IS NULL${class_id ? " AND id=$4" : ""})`
+      : `(SELECT c.id FROM classes c
         LEFT JOIN class_members m ON m.class_id=c.id AND m.user_id=$1
         WHERE c.deleted_at IS NULL AND (c.owner_id=$1 OR m.user_id IS NOT NULL)${classFilter})`;
 
@@ -84,7 +85,7 @@ export const workload = asyncHandler(async (req, res) => {
                 AND i.scheduled_for::date = date $2 + d) AS interrogations
        FROM days
      ORDER BY day`,
-    [userId, start]
+    [userId, start],
   );
   res.json({ week_start: start, days: rows });
 });

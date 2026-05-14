@@ -1,4 +1,4 @@
-"""/suggest · AI-powered scheduling helpers."""
+"""Helper per la pianificazione con AI."""
 import json
 import re
 from datetime import date, datetime
@@ -21,8 +21,8 @@ _IT_MONTHS = [
 
 
 def _format_italian_date(value) -> str:
-    """Best-effort conversion of an arbitrary date-like value into
-    'lunedì 11 maggio 2026'. Returns the original string on failure."""
+    """Converte un valore simile a una data in italiano, esempio lunedi 11 maggio 2026.
+    Restituisce la stringa originale in caso di errore."""
     if isinstance(value, datetime):
         d = value.date()
     elif isinstance(value, date):
@@ -39,7 +39,7 @@ def _format_italian_date(value) -> str:
 
 
 def _heuristic_score(day: dict) -> float:
-    # Lower load = higher score
+    # Carico minore uguale punteggio maggiore
     load = (day.get("homework", 0) * 0.5
             + day.get("exams", 0) * 1.5
             + day.get("interrogations", 0) * 1.0)
@@ -55,7 +55,7 @@ async def suggest_exam_day(req: SuggestExamRequest):
     )
     best = ranking[0] if ranking else {"day": "", "score": 0.0}
 
-    # Optional LLM short rationale
+    # Motivazione breve opzionale con LLM
     reasoning = "Giorno con il minor carico previsto (meno verifiche, interrogazioni e compiti da consegnare)."
     best_label = _format_italian_date(best["day"])
     # Build a workload summary with Italian human-readable dates for the LLM
@@ -89,8 +89,8 @@ async def suggest_exam_day(req: SuggestExamRequest):
         )
         candidate = re.split(r"\n\n", out.strip(), maxsplit=1)[0][:400].strip()
 
-        # Validate: the model must mention the chosen day and must NOT mention
-        # any other day from the workload. Otherwise fall back to deterministic.
+        # Valida che il modello menzioni il giorno scelto e NON menzioni
+        # altri giorni dal carico. Altrimenti usa la risposta deterministica.
         other_days = [
             _format_italian_date(d.get("day")).lower()
             for d in workload
@@ -99,7 +99,7 @@ async def suggest_exam_day(req: SuggestExamRequest):
         low = candidate.lower()
         mentions_chosen = best_label.lower() in low
         mentions_other = any(od in low for od in other_days if od)
-        # Also reject if the model leaked an ISO-like timestamp
+        # Rifiuta anche se il modello ha rivelato un timestamp in stile ISO
         has_iso_leak = bool(re.search(r"\d{4}-\d{2}-\d{2}", candidate))
 
         if candidate and mentions_chosen and not mentions_other and not has_iso_leak:

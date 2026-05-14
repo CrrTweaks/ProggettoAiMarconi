@@ -1,4 +1,4 @@
-"""Async Ollama HTTP client (chat + embeddings)."""
+"""Client HTTP asincrono per Ollama (chat e embeddings)."""
 from typing import AsyncIterator, List, Dict, Any
 import json
 import httpx
@@ -15,7 +15,7 @@ class OllamaClient:
     async def aclose(self) -> None:
         await self._http.aclose()
 
-    # ───────────────────── chat ─────────────────────
+    # Chat
     async def chat(
         self,
         messages: List[Dict[str, str]],
@@ -60,7 +60,7 @@ class OllamaClient:
                 if chunk.get("done"):
                     break
 
-    # ───────────────────── embeddings ─────────────────────
+    # Embeddings
     async def embed(self, text: str, model: str | None = None) -> List[float]:
         payload = {
             "model": model or settings.OLLAMA_EMBED_MODEL,

@@ -1,7 +1,4 @@
-// ════════════════════════════════════════════════════════════════
-//  /ai · thin authenticated proxy to FastAPI service
-//        (chat, RAG, concept-map, voice, suggestions)
-// ════════════════════════════════════════════════════════════════
+// Proxy autenticato verso il servizio FastAPI per chat, RAG, mappe, voce e suggerimenti
 import { Router } from "express";
 import axios from "axios";
 import { requireAuth } from "../middleware/auth.js";
@@ -12,7 +9,7 @@ import { query } from "../config/db.js";
 const router = Router();
 router.use(requireAuth);
 
-/** Health passthrough */
+/** Healthcheck pass through */
 router.get(
   "/health",
   asyncHandler(async (_req, res) => {
@@ -21,7 +18,7 @@ router.get(
   }),
 );
 
-/** ── Chat (non-streaming) ── */
+/** Chat senza streaming */
 router.post(
   "/chat",
   asyncHandler(async (req, res) => {
@@ -36,17 +33,17 @@ router.post(
   }),
 );
 
-/** ── Chat streaming (Server-Sent Events) ── */
+/** Chat streaming con Server Sent Events */
 router.post(
   "/chat/stream",
   asyncHandler(async (req, res) => {
-    // Disable Express compression() buffering on this route (it breaks SSE).
+    // Disabilita il buffering della compressione Express per non rompere SSE
     res.setHeader("Content-Encoding", "identity");
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache, no-transform");
     res.setHeader("Connection", "keep-alive");
     res.setHeader("X-Accel-Buffering", "no");
-    // Disable Nagle on the underlying socket so chunks are flushed immediately
+    // Disabilita Nagle sul socket sottostante per inviare i chunk subito
     req.socket?.setNoDelay?.(true);
     res.flushHeaders?.();
 
@@ -79,7 +76,7 @@ router.post(
   }),
 );
 
-/** ── List my chats ── */
+/** Elenco delle mie chat */
 router.get(
   "/chats",
   asyncHandler(async (req, res) => {
@@ -92,7 +89,7 @@ router.get(
   }),
 );
 
-/** ── Messages of a chat ── */
+/** Messaggi di una chat */
 router.get(
   "/chats/:id/messages",
   asyncHandler(async (req, res) => {
@@ -121,11 +118,11 @@ router.delete(
   }),
 );
 
-/** ── RAG · upload PDF (multipart passthrough) ── */
+/** Caricamento PDF RAG pass through multipart */
 router.post(
   "/rag/upload",
   asyncHandler(async (req, res) => {
-    // Front-end uploads multipart directly to FastAPI, but we expose a proxy too.
+    // Il frontend carica direttamente su FastAPI, ma esponiamo anche un proxy
     const { data } = await aiClient.post("/rag/upload", req.body, {
       headers: req.headers,
       params: { user_id: req.user.id },
@@ -167,7 +164,7 @@ router.post(
   }),
 );
 
-/** ── Concept maps ── */
+/** Mappe concettuali */
 router.post(
   "/concept-map",
   asyncHandler(async (req, res) => {
@@ -203,7 +200,7 @@ router.get(
   }),
 );
 
-/** ── Voice ── */
+/** Voce */
 router.post(
   "/voice/transcribe",
   asyncHandler(async (req, res) => {
@@ -226,13 +223,13 @@ router.post(
   }),
 );
 
-/** ── AI calendar suggestions ── */
+/** Suggerimenti calendario AI */
 router.post(
   "/suggest/exam-day",
   asyncHandler(async (req, res) => {
     const { class_id, week_start } = req.body;
-    // Use the later of week_start and today, then generate the next 7 days
-    // so we never suggest a past date.
+    // Usa il massimo tra week start e oggi, poi genera i prossimi 7 giorni
+    // per non suggerire mai una data passata
     const { rows: days } = await query(
       `WITH base AS (
          SELECT GREATEST($2::date, CURRENT_DATE) AS start_date

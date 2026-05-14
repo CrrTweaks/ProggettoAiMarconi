@@ -112,7 +112,7 @@ export default function Login() {
 export function AuthLayout({ title, subtitle, children }) {
   return (
     <div className="relative min-h-screen overflow-hidden grid-bg">
-      {/* Glow blobs */}
+      {/* Sfere luminose */}
       <div
         aria-hidden
         className="pointer-events-none absolute -top-40 -left-40 size-[40rem] rounded-full bg-primary/20 blur-3xl"
@@ -123,7 +123,7 @@ export function AuthLayout({ title, subtitle, children }) {
       />
 
       <div className="relative z-10 grid min-h-screen grid-cols-1 lg:grid-cols-2">
-        {/* Left: brand panel */}
+        {/* Sinistra: pannello brand */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -176,7 +176,7 @@ export function AuthLayout({ title, subtitle, children }) {
           </div>
         </motion.div>
 
-        {/* Right: auth card */}
+        {/* Destra: card autenticazione */}
         <div className="flex items-center justify-center p-6 sm:p-12">
           <motion.div
             initial={{ opacity: 0, y: 12 }}

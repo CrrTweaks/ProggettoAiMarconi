@@ -1,7 +1,5 @@
 """
-═══════════════════════════════════════════════════════════════════
-  AI School Workspace · FastAPI AI microservice
-═══════════════════════════════════════════════════════════════════
+Microservizio AI FastAPI per AI School Workspace
 """
 from contextlib import asynccontextmanager
 from fastapi import FastAPI

@@ -1,4 +1,4 @@
-"""Chat persistence · save chats / messages, load history."""
+"""Persistenza chat: salva chat e messaggi, carica cronologia."""
 from typing import List, Optional
 from uuid import UUID
 

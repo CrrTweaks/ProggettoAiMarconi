@@ -94,7 +94,7 @@ export default function RagPdf() {
         subtitle="Carica PDF, indicizzali con embedding, poi interrogali con l'AI"
       />
 
-      {/* Dropzone */}
+      {/* Zona di caricamento */}
       <motion.div
         {...getRootProps()}
         whileHover={{ scale: 1.005 }}
@@ -134,7 +134,7 @@ export default function RagPdf() {
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_440px] gap-6">
-        {/* Documents list */}
+        {/* Elenco documenti */}
         <section>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-muted-fg">
             I tuoi documenti · {docs.length}
@@ -204,7 +204,7 @@ export default function RagPdf() {
           )}
         </section>
 
-        {/* Quick query */}
+        {/* Interrogazione rapida */}
         <RagAsk docIds={selectedDocs} userId={user?.id} />
       </div>
     </div>

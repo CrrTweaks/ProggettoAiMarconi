@@ -1,10 +1,10 @@
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
-/** Merge classnames with Tailwind-aware deduplication. */
+/** Unisce classnames con deduplicazione consapevole di Tailwind. */
 export const cn = (...inputs) => twMerge(clsx(inputs));
 
-/** Format a date as locale-aware short string (Italian). */
+/** Formatta una data come stringa corta in italiano. */
 export const formatDate = (d, opts = {}) => {
   if (!d) return "";
   const date = typeof d === "string" ? new Date(d) : d;

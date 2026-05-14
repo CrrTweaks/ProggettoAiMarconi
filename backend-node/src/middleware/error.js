@@ -1,6 +1,4 @@
-// ════════════════════════════════════════════════════════════════
-//  Centralised error handling
-// ════════════════════════════════════════════════════════════════
+// Gestione errori centralizzata
 import { logger } from "../config/logger.js";
 
 export class HttpError extends Error {
@@ -25,6 +23,6 @@ export const errorHandler = (err, req, res, _next) => {
   });
 };
 
-/** Wrap async route handlers to forward rejections to errorHandler */
+/** Avvolge gli handler async per inoltrare le rejection al gestore errori */
 export const asyncHandler = (fn) => (req, res, next) =>
   Promise.resolve(fn(req, res, next)).catch(next);

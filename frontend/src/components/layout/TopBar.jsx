@@ -85,7 +85,7 @@ export default function TopBar() {
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-border/40 bg-bg/70 backdrop-blur-xl px-4 sm:px-6">
-      {/* Search trigger */}
+      {/* Trigger ricerca */}
       <button
         onClick={togglePalette}
         className="group flex h-9 max-w-md flex-1 items-center gap-3 rounded-md border border-border bg-elevated/40 px-3 text-sm text-muted-fg transition-colors hover:bg-elevated"
@@ -99,7 +99,7 @@ export default function TopBar() {
 
       <div className="flex-1" />
 
-      {/* AI button */}
+      {/* Pulsante AI */}
       <Button
         variant="gradient"
         onClick={toggleAIPanel}
@@ -109,7 +109,7 @@ export default function TopBar() {
         Chiedi all'AI
       </Button>
 
-      {/* Notifications */}
+      {/* Notifiche */}
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="ghost" size="icon" className="relative">
@@ -173,7 +173,7 @@ export default function TopBar() {
         </PopoverContent>
       </Popover>
 
-      {/* User menu */}
+      {/* Menu utente */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="flex items-center gap-2 rounded-full p-1 hover:bg-elevated">

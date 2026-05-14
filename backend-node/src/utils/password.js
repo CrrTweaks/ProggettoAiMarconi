@@ -1,7 +1,5 @@
-// ════════════════════════════════════════════════════════════════
-//  bcrypt password hashing
-// ════════════════════════════════════════════════════════════════
-import bcrypt from 'bcryptjs';
+// Hashing delle password con bcrypt
+import bcrypt from "bcryptjs";
 
 const ROUNDS = 12;
 

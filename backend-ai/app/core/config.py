@@ -1,4 +1,4 @@
-"""Settings · loaded from .env via pydantic-settings."""
+"""Impostazioni caricate da .env tramite pydantic settings."""
 from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -11,11 +11,11 @@ class Settings(BaseSettings):
         case_sensitive=True,
     )
 
-    # ── App ──
+    # App
     AI_HOST: str = "0.0.0.0"
     AI_PORT: int = 8000
 
-    # ── CORS ──
+    # CORS
     CORS_ORIGINS: List[str] = [
         "http://localhost:5173",
         "http://localhost:5174",
@@ -25,18 +25,18 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5174",
     ]
 
-    # ── Database ──
+    # Database
     DATABASE_URL: str = (
         "postgresql://postgres:postgres@localhost:5432/aischool"
     )
 
-    # ── Ollama ──
+    # Ollama
     OLLAMA_HOST: str           = "http://localhost:11434"
     OLLAMA_DEFAULT_MODEL: str  = "llama3"
     OLLAMA_EMBED_MODEL: str    = "nomic-embed-text"
     PGVECTOR_DIM: int          = 768
 
-    # ── RAG / PDF ──
+    # RAG e PDF
     UPLOAD_DIR: str            = "./uploads"
     MAX_PDF_MB: int            = 25
     CHUNK_SIZE: int            = 800

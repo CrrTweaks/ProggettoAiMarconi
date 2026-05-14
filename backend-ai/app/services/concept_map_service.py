@@ -1,4 +1,4 @@
-"""Concept-map generation: extract concepts + relations from text via LLM."""
+"""Generazione mappe concettuali: estrae concetti e relazioni dal testo tramite LLM."""
 import json
 import re
 from typing import List, Optional
@@ -38,7 +38,7 @@ TESTO:
 
 
 def _parse_json(raw: str) -> dict:
-    # Strip code fences if the model added them anyway
+    # Rimuove i fence di codice se il modello li ha aggiunti comunque
     cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip(), flags=re.M)
     # Try to locate the outermost JSON object
     match = re.search(r"\{.*\}", cleaned, re.S)

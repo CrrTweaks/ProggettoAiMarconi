@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-// Strip simple markdown emphasis markers from a string.
+// Rimuove i marcatori markdown semplici da una stringa.
 function stripMd(s) {
   return (s || "")
     .replace(/\*\*(.+?)\*\*/g, "$1")
@@ -21,14 +21,13 @@ function stripMd(s) {
 }
 
 function parseQuiz(md) {
-  // Title: accept "## Quiz: ...", "**Quiz: ...**", or just "Quiz: ..." on its own line.
+  // Titolo: accetta "## Quiz: ...", "**Quiz: ...**" oppure solo "Quiz: ..." nella sua riga.
   const titleMatch =
     md.match(/(?:^|\n)\s*#{0,4}\s*\**\s*Quiz\s*:\s*([^\n*]+)/i) || null;
   const title = stripMd(titleMatch?.[1] || "") || "Quiz";
 
-  // Split into blocks at any "Domanda N" line, regardless of heading/bold markers.
-  const blockSplitRe =
-    /(?=(?:^|\n)\s*(?:#{1,4}\s*|\*\*)?Domanda\s+\d+\b)/i;
+  // Divide in blocchi a ogni riga "Domanda N", indipendentemente dai marcatori di intestazione o grassetto.
+  const blockSplitRe = /(?=(?:^|\n)\s*(?:#{1,4}\s*|\*\*)?Domanda\s+\d+\b)/i;
   const blocks = md
     .split(blockSplitRe)
     .filter((b) => /(?:^|\n)\s*(?:#{1,4}\s*|\*\*)?Domanda\s+\d+/i.test(b));
@@ -36,14 +35,14 @@ function parseQuiz(md) {
   const questions = blocks.map((rawBlock) => {
     const block = rawBlock.trim();
 
-    // Header: "Domanda N — type" with optional ###, **, and various dashes.
+    // Intestazione: "Domanda N — tipo" con ###, ** o trattini vari opzionali.
     const header = block.match(
       /(?:#{1,4}\s*|\*\*)?Domanda\s+(\d+)\s*[—–-]\s*([^\n*]+)/i,
     );
     const number = header?.[1] || "";
     const type = stripMd(header?.[2] || "");
 
-    // Question text.
+    // Testo della domanda.
     let text = "";
     const dMatch = block.match(/\*\*\s*D\s*:?\s*\*\*\s*([^\n]+)/i);
     if (dMatch) text = stripMd(dMatch[1]);
@@ -53,7 +52,7 @@ function parseQuiz(md) {
       for (let i = hIdx + 1; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
-        // skip option lines, html tags, summary markers, dividers
+        // salta righe opzione, tag html, marcatori summary, divisori
         if (/^[-*•]\s*[A-D]\)/i.test(line)) continue;
         if (/^<\/?[a-z]/i.test(line)) continue;
         if (/^✅|^Risposta\b/i.test(line)) continue;
@@ -63,7 +62,7 @@ function parseQuiz(md) {
       }
     }
 
-    // Options A-D (with or without leading "-"/"•"/"*").
+    // Opzioni A-D (con o senza "-"/"•"/"*" iniziali).
     const options = [];
     const seen = new Set();
     const optRe = /(?:^|\n)\s*(?:[-*•]\s*)?([A-D])\)\s+([^\n]+)/gi;
@@ -75,16 +74,16 @@ function parseQuiz(md) {
       options.push({ letter, text: stripMd(m[2]) });
     }
 
-    // Correct answer: tolerate **bold** or plain, "—", "-", ":" separators,
-    // optional source "[p.N]" at the end.
+    // Risposta corretta: tollera **grassetto** o testo semplice, separatori "—", "-", ":",
+    // fonte opzionale "[p.N]" alla fine.
     const ansMatch = block.match(
       /(?:\*\*\s*)?Risposta\s+corretta\s*:?\s*(?:\*\*)?\s*([A-Z])?\s*(?:[—–\-:]\s*)?([^\n]*)/i,
     );
     let correctLetter = ansMatch?.[1]?.toUpperCase() || "";
     let explanationRaw = ansMatch?.[2] || "";
 
-    // If no letter (e.g. open question), try to extract one from the explanation
-    // if it starts with "A — ..." style; otherwise leave empty.
+    // Se manca la lettera (es. domanda aperta), prova a estrarla dalla spiegazione
+    // se inizia con stile "A — ..."; altrimenti lascia vuoto.
     if (!correctLetter) {
       const lead = explanationRaw.match(/^\s*([A-D])\s*[—–\-:]\s*(.*)/);
       if (lead) {
@@ -93,9 +92,9 @@ function parseQuiz(md) {
       }
     }
 
-    // Strip trailing "[p.N]" from explanation; capture as source.
+    // Rimuove "[p.N]" finale dalla spiegazione e lo cattura come fonte.
     const srcMatch = explanationRaw.match(/\[([^\]]+)\]\s*\.?\s*$/);
-    const source = srcMatch?.[1] || (block.match(/\[(p\.[^\]]+)\]/i)?.[1] || "");
+    const source = srcMatch?.[1] || block.match(/\[(p\.[^\]]+)\]/i)?.[1] || "";
     const explanation = stripMd(
       explanationRaw.replace(/\[[^\]]+\]\s*\.?\s*$/, "").trim(),
     );
@@ -111,7 +110,7 @@ export default function QuizRenderer({ content }) {
   const [revealed, setRevealed] = useState({});
 
   if (!quiz.questions.length) {
-    // Fallback to normal markdown if parsing yields nothing
+    // Fallback al markdown normale se il parsing non produce risultati
     return (
       <div className="prose prose-invert prose-sm max-w-none">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
@@ -124,20 +123,20 @@ export default function QuizRenderer({ content }) {
 
   return (
     <div className="space-y-4">
-      {/* Quiz header */}
+      {/* Intestazione quiz */}
       <div className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary/20 to-accent/10 p-3 border border-primary/20">
         <FileQuestion className="size-5 text-primary shrink-0" />
         <h3 className="text-sm font-semibold text-fg">{quiz.title}</h3>
       </div>
 
-      {/* Questions */}
+      {/* Domande */}
       <div className="space-y-3">
         {quiz.questions.map((q) => (
           <div
             key={q.number}
             className="rounded-xl border border-border/60 bg-elevated/40 p-4"
           >
-            {/* Question header */}
+            {/* Intestazione domanda */}
             <div className="flex items-start gap-2 mb-2">
               <span className="inline-flex items-center justify-center rounded-full bg-primary/15 text-primary text-[11px] font-bold size-5 shrink-0 mt-0.5">
                 {q.number}
@@ -154,7 +153,7 @@ export default function QuizRenderer({ content }) {
               </div>
             </div>
 
-            {/* Options */}
+            {/* Opzioni */}
             {q.options.length > 0 && (
               <div className="ml-7 space-y-1.5 mb-3">
                 {q.options.map((opt) => (
@@ -165,16 +164,14 @@ export default function QuizRenderer({ content }) {
                     <span
                       className={cn(
                         "inline-flex items-center justify-center rounded-full size-5 shrink-0 text-[10px] font-bold border mt-0.5",
-                        revealed[q.number] &&
-                          opt.letter === q.correctLetter
+                        revealed[q.number] && opt.letter === q.correctLetter
                           ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
                           : revealed[q.number]
                             ? "bg-muted/40 text-muted-fg border-border/40"
                             : "bg-primary/10 text-primary border-primary/20",
                       )}
                     >
-                      {revealed[q.number] &&
-                      opt.letter === q.correctLetter ? (
+                      {revealed[q.number] && opt.letter === q.correctLetter ? (
                         <CheckCircle2 className="size-3" />
                       ) : (
                         opt.letter
@@ -188,15 +185,13 @@ export default function QuizRenderer({ content }) {
               </div>
             )}
 
-            {/* Toggle answer */}
+            {/* Mostra/nascondi risposta */}
             <button
               onClick={() => toggle(q.number)}
               className="ml-7 inline-flex items-center gap-1.5 rounded-md bg-primary/10 hover:bg-primary/20 border border-primary/20 px-3 py-1.5 text-xs font-medium text-primary transition-colors"
             >
               <HelpCircle className="size-3.5" />
-              {revealed[q.number]
-                ? "Nascondi risposta"
-                : "Mostra risposta"}
+              {revealed[q.number] ? "Nascondi risposta" : "Mostra risposta"}
               <motion.span
                 animate={{ rotate: revealed[q.number] ? 180 : 0 }}
                 transition={{ duration: 0.2 }}
@@ -205,7 +200,7 @@ export default function QuizRenderer({ content }) {
               </motion.span>
             </button>
 
-            {/* Answer reveal */}
+            {/* Rivelazione risposta */}
             <AnimatePresence initial={false}>
               {revealed[q.number] && (
                 <motion.div

@@ -1,6 +1,4 @@
-// ════════════════════════════════════════════════════════════════
-//  Absences controller
-// ════════════════════════════════════════════════════════════════
+// Controller assenze
 import { query } from "../config/db.js";
 import { HttpError, asyncHandler } from "../middleware/error.js";
 
@@ -9,7 +7,7 @@ export const list = asyncHandler(async (req, res) => {
   const params = [];
   let where = "1=1";
 
-  // Students: only own absences. Teachers/Admin: any inside their classes.
+  // Studenti: solo le proprie assenze. Docenti e admin: qualsiasi nelle loro classi
   if (req.user.role === "student") {
     params.push(req.user.id);
     where += ` AND a.user_id = $${params.length}`;

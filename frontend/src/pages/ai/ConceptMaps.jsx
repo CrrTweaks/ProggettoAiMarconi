@@ -86,7 +86,7 @@ export default function ConceptMaps() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6">
-        {/* Generator */}
+        {/* Generatore */}
         <aside className="space-y-4">
           <div className="rounded-xl border border-border/60 bg-panel/60 backdrop-blur-xl p-4 shadow-card">
             <div className="space-y-1.5 mb-3">
@@ -156,7 +156,7 @@ export default function ConceptMaps() {
             </Tabs>
           </div>
 
-          {/* History */}
+          {/* Cronologia */}
           <div className="rounded-xl border border-border/60 bg-panel/60 backdrop-blur-xl shadow-card overflow-hidden">
             <div className="border-b border-border/40 p-3 text-sm font-semibold tracking-tight">
               Mappe recenti
@@ -189,7 +189,7 @@ export default function ConceptMaps() {
           </div>
         </aside>
 
-        {/* Graph */}
+        {/* Grafo */}
         <div className="rounded-xl border border-border/60 bg-panel/60 backdrop-blur-xl shadow-card overflow-hidden h-[70vh]">
           {!graph ? (
             <div className="grid h-full place-items-center">
@@ -209,7 +209,7 @@ export default function ConceptMaps() {
 }
 
 function buildLayout(nodes, edges) {
-  // Radial layout: root in the centre, others on rings
+  // Layout radiale: la radice al centro, gli altri su anelli concentrici
   const childCount = new Map();
   edges.forEach((e) => childCount.set(e.target, childCount.get(e.target) || 0));
   const incoming = new Map();
@@ -344,7 +344,7 @@ function FlowGraph({ data, onExport }) {
 }
 
 function exportSVG(data) {
-  // Simple SVG export of nodes & labels (browsers can rasterise to PNG).
+  // Esportazione SVG semplice di nodi ed etichette (i browser possono rasterizzare in PNG).
   const { rfNodes, rfEdges } = buildLayout(data.nodes, data.edges);
   const minX = Math.min(...rfNodes.map((n) => n.position.x)) - 200;
   const maxX = Math.max(...rfNodes.map((n) => n.position.x)) + 200;

@@ -1,6 +1,4 @@
-// ════════════════════════════════════════════════════════════════
-//  Classes controller
-// ════════════════════════════════════════════════════════════════
+// Controller classi
 import { query, withTransaction } from "../config/db.js";
 import { HttpError, asyncHandler } from "../middleware/error.js";
 

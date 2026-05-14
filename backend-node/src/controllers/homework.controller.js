@@ -1,6 +1,4 @@
-// ════════════════════════════════════════════════════════════════
-//  Homework controller
-// ════════════════════════════════════════════════════════════════
+// Controller compiti
 import { query } from "../config/db.js";
 import { HttpError, asyncHandler } from "../middleware/error.js";
 import { emitToUser } from "../services/socket.js";
@@ -53,7 +51,7 @@ export const create = asyncHandler(async (req, res) => {
       req.user.id,
     ],
   );
-  // Notify class members
+  // Notifica i membri della classe
   const { rows: members } = await query(
     `SELECT user_id FROM class_members WHERE class_id=$1 AND role='student'`,
     [class_id],

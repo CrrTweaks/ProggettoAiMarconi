@@ -1,4 +1,4 @@
-"""Voice services · speech-to-text + text-to-speech."""
+"""Servizi vocali: speech to text e text to speech."""
 import io
 import tempfile
 from pathlib import Path
@@ -10,25 +10,25 @@ from pydub import AudioSegment
 
 
 def _convert_to_wav(file_bytes: bytes, suffix: str = ".webm") -> bytes:
-    """Convert any audio format (webm, mp3, etc.) to WAV bytes."""
+    """Converte qualsiasi formato audio in WAV."""
     try:
         audio = AudioSegment.from_file(io.BytesIO(file_bytes), format=suffix.lstrip("."))
         buf = io.BytesIO()
         audio.export(buf, format="wav")
         return buf.getvalue()
     except Exception:
-        # If conversion fails, assume it's already WAV
+        # Se la conversione fallisce, assume sia gia WAV
         return file_bytes
 
 
 def transcribe_audio(file_bytes: bytes, lang: str = "it-IT") -> str:
-    """Convert raw audio bytes (any format) to text using Google STT."""
+    """Converte byte audio grezzi in testo usando Google STT."""
     recognizer = sr.Recognizer()
 
-    # Convert webm/opus/etc to wav if needed
+    # Converte webm o altri formati in wav se necessario
     wav_bytes = _convert_to_wav(file_bytes)
 
-    # write to a temp file because speech_recognition expects a file path
+    # Scrive in un file temporaneo perche speech recognition richiede un percorso
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
         tmp.write(wav_bytes)
         tmp_path = tmp.name
@@ -51,7 +51,7 @@ def transcribe_audio(file_bytes: bytes, lang: str = "it-IT") -> str:
 
 
 def synthesize_speech(text: str, lang: str = "it") -> bytes:
-    """Generate MP3 audio for `text` using gTTS. Returns raw bytes."""
+    """Genera audio MP3 per il testo usando gTTS. Restituisce i byte grezzi."""
     if not text or not text.strip():
         raise ValueError("Empty text for TTS")
     tts = gTTS(text=text[:5000], lang=lang)

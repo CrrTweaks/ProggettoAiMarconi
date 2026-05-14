@@ -50,20 +50,20 @@ export default function AIChat() {
   const scrollRef = useRef(null);
   const recRef = useRef(null);
 
-  // List chats
+  // Elenco chat
   const { data: chats = [] } = useQuery({
     queryKey: ["ai-chats"],
     queryFn: async () => (await api.get("/ai/chats")).data.chats || [],
   });
 
-  // List user PDFs (for RAG)
+  // Elenco PDF utente (per RAG)
   const { data: docs = [] } = useQuery({
     queryKey: ["ai-rag-docs"],
     queryFn: async () =>
       (await api.get("/ai/rag/documents")).data.documents || [],
   });
 
-  // Load history when switching chat
+  // Carica la cronologia quando si cambia chat
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -157,7 +157,7 @@ export default function AIChat() {
     }
   };
 
-  // ── Voice input via MediaRecorder + AI /voice/transcribe ──
+  // Input vocale tramite MediaRecorder + AI /voice/transcribe
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -167,7 +167,7 @@ export default function AIChat() {
       mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunks, { type: "audio/webm" });
-        // Convert to wav-ish via FormData; FastAPI accepts the raw blob.
+        // Conversione in stile wav tramite FormData; FastAPI accetta il blob grezzo.
         const fd = new FormData();
         fd.append("file", blob, "rec.webm");
         fd.append("lang", "it-IT");
@@ -194,7 +194,7 @@ export default function AIChat() {
     setRecording(false);
   };
 
-  // TTS read-aloud
+  // Lettura ad alta voce TTS
   const speak = async (text) => {
     try {
       const res = await aiApi.post(
@@ -212,7 +212,7 @@ export default function AIChat() {
 
   return (
     <div className="grid h-[calc(100vh-9rem)] grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
-      {/* Sidebar (chats) */}
+      {/* Barra laterale (chat) */}
       <aside className="hidden lg:flex flex-col rounded-xl border border-border/60 bg-panel/60 backdrop-blur-xl overflow-hidden">
         <div className="p-3 border-b border-border/40">
           <Button variant="gradient" className="w-full" onClick={newChat}>
@@ -256,7 +256,7 @@ export default function AIChat() {
         </ScrollArea>
       </aside>
 
-      {/* Main chat */}
+      {/* Chat principale */}
       <div className="flex min-h-0 flex-col rounded-xl border border-border/60 bg-panel/60 backdrop-blur-xl overflow-hidden">
         <PageHeader
           className="m-4 mb-2"

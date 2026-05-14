@@ -104,7 +104,7 @@ export default function Sidebar() {
           </Button>
         </div>
 
-        {/* Nav */}
+        {/* Navigazione */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6 scrollbar-thin">
           {NAV_GROUPS.map((group) => (
             <div key={group.title}>
@@ -134,7 +134,7 @@ export default function Sidebar() {
           ))}
         </nav>
 
-        {/* Settings */}
+        {/* Impostazioni */}
         <div className="border-t border-border/40 p-3">
           <NavItem
             to="/settings"

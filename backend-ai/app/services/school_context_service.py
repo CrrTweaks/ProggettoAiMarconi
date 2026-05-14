@@ -1,6 +1,5 @@
-"""Build a textual summary of the user's upcoming school workload
-(compiti, esami, interrogazioni, lezioni) so that the chat LLM can
-answer questions like "ho compiti per oggi?" using real data.
+"""Crea un riassunto testuale del carico scolastico imminente dell utente
+permettendo alla chat LLM di rispondere usando dati reali.
 """
 from datetime import date, timedelta
 from typing import Optional
@@ -13,15 +12,15 @@ async def build_user_context(
     user_id: UUID,
     days_ahead: int = 14,
 ) -> str:
-    """Return a Markdown-formatted summary of the user's classes, homework,
-    exams, interrogations and recent lessons. Empty string if no data.
+    """Restituisce un riassunto in Markdown di classi, compiti, verifiche,
+    interrogazioni e lezioni recenti. Stringa vuota se non ci sono dati.
     """
     today = date.today()
     horizon = today + timedelta(days=days_ahead)
 
     async with get_conn() as conn:
         async with conn.cursor() as cur:
-            # User profile
+            # Profilo utente
             await cur.execute(
                 "SELECT full_name, role FROM users WHERE id=%s",
                 (str(user_id),),
@@ -30,7 +29,7 @@ async def build_user_context(
             if not user:
                 return ""
 
-            # Classes the user belongs to
+            # Classi a cui l utente appartiene
             await cur.execute(
                 """SELECT c.id, c.name, c.subject
                    FROM classes c
@@ -47,7 +46,7 @@ async def build_user_context(
             interrogations: list = []
             lessons: list = []
             if class_ids:
-                # Homework due in horizon
+                # Compiti in scadenza nel periodo
                 await cur.execute(
                     """SELECT h.title, h.subject, h.due_date, h.priority,
                               c.name AS class_name

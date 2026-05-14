@@ -1,10 +1,8 @@
-// ════════════════════════════════════════════════════════════════
-//  JWT authentication + RBAC middleware
-// ════════════════════════════════════════════════════════════════
+// Middleware per autenticazione JWT e controllo ruoli
 import { verifyAccessToken } from "../utils/jwt.js";
 import { HttpError } from "./error.js";
 
-/** Require a valid access token. Populates req.user. */
+/** Richiede un token di accesso valido e popola req.user. */
 export function requireAuth(req, _res, next) {
   try {
     const header = req.headers.authorization || "";
@@ -23,7 +21,7 @@ export function requireAuth(req, _res, next) {
   }
 }
 
-/** Restrict to specific roles. */
+/** Limita l accesso a ruoli specifici. */
 export const requireRole =
   (...allowed) =>
   (req, _res, next) => {
@@ -39,7 +37,7 @@ export const requireRole =
     next();
   };
 
-/** Optional auth: attach user if a valid token is present, but don't fail otherwise. */
+/** Autenticazione opzionale: aggiunge l utente se il token e valido, altrimenti non blocca. */
 export function optionalAuth(req, _res, next) {
   try {
     const header = req.headers.authorization || "";

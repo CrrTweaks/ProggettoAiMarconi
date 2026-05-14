@@ -1,4 +1,4 @@
-"""/voice · speech-to-text + text-to-speech."""
+"""Speech to text e text to speech."""
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 import io

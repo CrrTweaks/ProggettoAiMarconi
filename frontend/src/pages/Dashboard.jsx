@@ -116,7 +116,7 @@ export default function Dashboard() {
         }
       />
 
-      {/* Stats */}
+      {/* Statistiche */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={ClipboardList}
@@ -153,7 +153,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Today */}
+        {/* Oggi */}
         <Card
           title="Agenda di oggi"
           icon={Clock}
@@ -180,7 +180,7 @@ export default function Dashboard() {
           )}
         </Card>
 
-        {/* Upcoming homework */}
+        {/* Compiti in arrivo */}
         <Card
           title="Compiti"
           icon={ClipboardList}
@@ -232,7 +232,7 @@ export default function Dashboard() {
           )}
         </Card>
 
-        {/* AI quick actions */}
+        {/* Azioni rapide AI */}
         <Card title="Strumenti AI" icon={Sparkles} highlight>
           <div className="space-y-2">
             <ToolLink
@@ -263,7 +263,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Upcoming exams */}
+      {/* Verifiche e interrogazioni imminenti */}
       <Card
         title="Verifiche e interrogazioni imminenti"
         icon={FileText}

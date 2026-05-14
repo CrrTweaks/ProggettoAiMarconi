@@ -1,4 +1,4 @@
-"""/chat · non-streaming + SSE streaming chat with optional RAG context."""
+"""Chat senza streaming e con streaming SSE, con contesto RAG opzionale."""
 import json
 from uuid import UUID
 from fastapi import APIRouter, HTTPException
@@ -36,7 +36,7 @@ def _build_messages(
             "content": f"Usa il seguente contesto recuperato quando pertinente:\n{rag_context}",
         })
     msgs.extend(history)
-    # The last user message in req_messages is the new turn
+    # L ultimo messaggio utente in req_messages e il nuovo turno
     for m in req_messages:
         msgs.append({"role": m.role, "content": m.content})
     return msgs
@@ -57,10 +57,10 @@ async def chat(req: ChatRequest):
     chat_row = await chat_service.get_or_create_chat(req.user_id, req.chat_id, model)
     chat_id = chat_row["id"]
 
-    # Persist user message
+    # Salva il messaggio utente
     await chat_service.append_message(chat_id, "user", user_msg.content)
 
-    # Optional RAG retrieval
+    # Recupero RAG opzionale
     sources: list[dict] = []
     rag_context = None
     if req.use_rag:
@@ -83,7 +83,7 @@ async def chat(req: ChatRequest):
 
     await chat_service.append_message(chat_id, "assistant", reply)
 
-    # Title on first turn
+    # Titolo al primo turno
     if not chat_row.get("title") or chat_row["title"] in ("New chat", "Nuova chat"):
         title = user_msg.content.strip().split("\n")[0][:60] or "Nuova chat"
         await chat_service.update_chat_title(chat_id, title)
@@ -127,7 +127,7 @@ async def chat_stream(req: ChatRequest):
     messages = _build_messages(history, req.messages, rag_context, school_context)
 
     async def event_stream():
-        # Send chat metadata + sources up-front
+        # Invia metadati chat e fonti in anticipo
         meta = {
             "chat_id": str(chat_id),
             "sources": [

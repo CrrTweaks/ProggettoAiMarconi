@@ -1,6 +1,4 @@
-// ════════════════════════════════════════════════════════════════
-//  Auth controller · register / login / refresh / logout / me
-// ════════════════════════════════════════════════════════════════
+// Controller autenticazione: registrazione, login, refresh, logout e profilo
 import { query } from "../config/db.js";
 import { hashPassword, comparePassword } from "../utils/password.js";
 import {

@@ -1,6 +1,4 @@
-// ════════════════════════════════════════════════════════════════
-//  Express application factory · middleware + routes
-// ════════════════════════════════════════════════════════════════
+// Factory dell applicazione Express con middleware e route
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -27,11 +25,10 @@ import aiProxyRoutes from "./routes/ai-proxy.routes.js";
 
 export const app = express();
 
-// ─── Security & infra ────────────────────────────────────────────
+// Sicurezza e infrastruttura
 app.set("trust proxy", 1);
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
-// CORS: explicit allow-list from env + automatic match for any localhost port
-// (Vite picks the next free port when 5173 is taken, so we accept 5173/5174/…)
+// CORS: lista di origini permesse dall env e match automatico per localhost
 const allowList = env.CORS_ORIGIN.split(",")
   .map((s) => s.trim())
   .filter(Boolean);
@@ -39,7 +36,7 @@ const localhostRe = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 app.use(
   cors({
     origin(origin, cb) {
-      // Same-origin / curl / server-to-server → no Origin header → allow
+      // Stessa origine, curl o server to server senza header Origin, consenti
       if (!origin) return cb(null, true);
       if (allowList.includes(origin)) return cb(null, true);
       if (env.NODE_ENV !== "production" && localhostRe.test(origin))
@@ -54,14 +51,14 @@ app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// HTTP access log piped through pino
+// Log di accesso HTTP tramite pino
 app.use(
   morgan("combined", {
     stream: { write: (msg) => logger.http(msg.trim()) },
   }),
 );
 
-// Global rate-limit (auth has its own stricter one)
+// Rate limit globale, l autenticazione ha il suo piu stringente
 app.use(
   rateLimit({
     windowMs: env.RATE_LIMIT_WINDOW_MS,
@@ -72,12 +69,12 @@ app.use(
   }),
 );
 
-// ─── Healthcheck ────────────────────────────────────────────────
+// Healthcheck
 app.get("/health", (_req, res) =>
   res.json({ status: "ok", service: "backend-node", ts: Date.now() }),
 );
 
-// ─── Routes ─────────────────────────────────────────────────────
+// Route
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/classes", classRoutes);
@@ -90,6 +87,6 @@ app.use("/interrogations", interrogationRoutes);
 app.use("/notifications", notificationRoutes);
 app.use("/ai", aiProxyRoutes);
 
-// ─── 404 & global error handler ─────────────────────────────────
+// 404 e gestore errori globale
 app.use(notFound);
 app.use(errorHandler);

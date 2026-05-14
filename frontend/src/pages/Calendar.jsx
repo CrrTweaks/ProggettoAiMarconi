@@ -150,7 +150,7 @@ export default function Calendar() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
-        {/* Grid */}
+        {/* Griglia */}
         <div className="rounded-xl border border-border/60 bg-panel/60 backdrop-blur-xl shadow-card overflow-hidden">
           <div className="grid grid-cols-7 border-b border-border/40 text-[11px] font-semibold uppercase tracking-widest text-muted-fg">
             {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map((d) => (
@@ -217,7 +217,7 @@ export default function Calendar() {
           </div>
         </div>
 
-        {/* Selected day panel */}
+        {/* Pannello giorno selezionato */}
         <aside className="rounded-xl border border-border/60 bg-panel/60 backdrop-blur-xl shadow-card overflow-hidden">
           <div className="border-b border-border/40 p-4">
             <div className="text-xs font-semibold uppercase tracking-widest text-muted-fg">
