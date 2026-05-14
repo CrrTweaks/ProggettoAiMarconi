@@ -9,10 +9,14 @@ import {
   BookOpen,
   Calendar,
   GraduationCap,
+  UserPlus,
+  Search,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { api } from "@/lib/api";
+import { useAuth } from "@/store/auth";
 import PageHeader from "@/components/shared/PageHeader";
 import EmptyState from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -90,6 +94,8 @@ export default function Classes() {
 }
 
 function ClassCard({ cls, idx, onDelete }) {
+  const { user } = useAuth();
+  const isTeacher = user?.role === "teacher" || user?.role === "admin";
   const { data: detail } = useQuery({
     queryKey: ["class-detail", cls.id],
     queryFn: async () => (await api.get(`/classes/${cls.id}`)).data,
@@ -123,14 +129,25 @@ function ClassCard({ cls, idx, onDelete }) {
               </Badge>
             )}
           </div>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="opacity-0 group-hover:opacity-100 text-muted-fg hover:text-danger"
-            onClick={onDelete}
-          >
-            <Trash2 className="size-4" />
-          </Button>
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {isTeacher && (
+              <MembersDialog
+                classId={cls.id}
+                className={cls.name}
+                members={detail?.members || []}
+              />
+            )}
+            {isTeacher && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-fg hover:text-danger"
+                onClick={onDelete}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            )}
+          </div>
         </div>
 
         {cls.description && (
@@ -174,6 +191,155 @@ function ClassCard({ cls, idx, onDelete }) {
         )}
       </div>
     </motion.div>
+  );
+}
+
+function MembersDialog({ classId, className, members }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+
+  const { data: searchResults = [], isFetching } = useQuery({
+    queryKey: ["users-search", q],
+    queryFn: async () =>
+      (await api.get("/users", { params: { q, role: "student" } })).data
+        .users || [],
+    enabled: open && q.trim().length >= 2,
+  });
+
+  const memberIds = new Set(members.map((m) => m.id));
+  const candidates = searchResults.filter((u) => !memberIds.has(u.id));
+
+  const add = useMutation({
+    mutationFn: (userId) =>
+      api.post(`/classes/${classId}/members`, {
+        user_id: userId,
+        role: "student",
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["class-detail", classId] });
+      qc.invalidateQueries({ queryKey: ["classes"] });
+      toast.success("Studente aggiunto");
+      setQ("");
+    },
+    onError: (e) =>
+      toast.error(e.response?.data?.error || "Impossibile aggiungere"),
+  });
+
+  const remove = useMutation({
+    mutationFn: (userId) => api.delete(`/classes/${classId}/members/${userId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["class-detail", classId] });
+      qc.invalidateQueries({ queryKey: ["classes"] });
+      toast.success("Studente rimosso");
+    },
+    onError: (e) =>
+      toast.error(e.response?.data?.error || "Impossibile rimuovere"),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="text-muted-fg hover:text-primary"
+          title="Gestisci membri"
+        >
+          <UserPlus className="size-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Gestisci membri · {className}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Cerca uno studente</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-fg" />
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Nome o email (min 2 caratteri)"
+                className="pl-9"
+              />
+            </div>
+            {q.trim().length >= 2 && (
+              <div className="max-h-48 overflow-y-auto rounded-md border border-border/40 bg-elevated/40">
+                {isFetching ? (
+                  <div className="grid place-items-center p-4">
+                    <Loader2 className="size-4 animate-spin text-muted-fg" />
+                  </div>
+                ) : candidates.length === 0 ? (
+                  <div className="p-3 text-sm text-muted-fg">
+                    Nessun risultato.
+                  </div>
+                ) : (
+                  candidates.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => add.mutate(u.id)}
+                      disabled={add.isPending}
+                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-elevated/80 transition"
+                    >
+                      <div>
+                        <div className="font-medium">{u.full_name}</div>
+                        <div className="text-xs text-muted-fg">{u.email}</div>
+                      </div>
+                      <Plus className="size-4 text-primary" />
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Membri attuali ({members.length})</Label>
+            {members.length === 0 ? (
+              <div className="rounded-md border border-border/40 bg-elevated/40 p-3 text-sm text-muted-fg">
+                Nessun membro. Aggiungine uno dalla ricerca qui sopra.
+              </div>
+            ) : (
+              <div className="max-h-48 overflow-y-auto rounded-md border border-border/40 divide-y divide-border/40">
+                {members.map((m) => (
+                  <div
+                    key={m.id}
+                    className="flex items-center justify-between gap-2 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">
+                        {m.full_name}
+                      </div>
+                      <div className="text-xs text-muted-fg truncate">
+                        {m.email} · {m.role}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-muted-fg hover:text-danger"
+                      onClick={() => remove.mutate(m.id)}
+                      disabled={remove.isPending}
+                      title="Rimuovi"
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Chiudi
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

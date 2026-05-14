@@ -68,7 +68,7 @@ app.use(
     max: env.RATE_LIMIT_MAX,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { error: "Too many requests, please try again later" },
+    message: { error: "Troppe richieste, riprova più tardi" },
   }),
 );
 

@@ -11,12 +11,12 @@ from app.core.ollama_client import ollama
 
 
 CONCEPT_PROMPT = """Sei un tutor AI. Dato il testo sottostante, costruisci una MAPPA CONCETTUALE.
-Estrai fino a {max_concepts} concetti chiave (frasi nominali brevi, 1–4 parole).
-Poi elenca relazioni dirette tra loro, ciascuna con un'etichetta breve (frase verbale, 1–4 parole).
+Estrai fino a {max_concepts} concetti chiave (frasi nominali brevi in italiano, 1–4 parole).
+Poi elenca relazioni dirette tra loro, ciascuna con un'etichetta breve (frase verbale in italiano, 1–4 parole, es. "include", "produce", "converte in", "è composto da", "causa", "appartiene a").
 
 Restituisci SOLO un oggetto JSON valido con questa forma esatta:
 {{
-  "title": "<titolo breve nella stessa lingua del testo>",
+  "title": "<titolo breve in italiano>",
   "nodes": [
     {{ "id": "n1", "label": "Concetto A", "type": "root" }},
     {{ "id": "n2", "label": "Concetto B", "type": "concept" }}
@@ -26,9 +26,10 @@ Restituisci SOLO un oggetto JSON valido con questa forma esatta:
   ]
 }}
 
-Regole:
+Regole assolute:
 - Usa id stabili "n1","n2", … in ordine di importanza (n1 = concetto centrale).
-- Rispondi nella STESSA LINGUA del testo di input.
+- TUTTE le label dei nodi e degli archi DEVONO essere in ITALIANO, anche se il testo originale è in un'altra lingua. NON usare mai parole inglesi nelle label.
+- Anche il "title" deve essere in italiano.
 - NON avvolgere il JSON in backtick markdown. Restituisci SOLO JSON.
 
 TESTO:

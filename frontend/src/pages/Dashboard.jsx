@@ -99,7 +99,7 @@ export default function Dashboard() {
         title={`Ciao, ${user?.full_name?.split(" ")[0] || "là"} 👋`}
         subtitle={
           isTeacher
-            ? "Gestisci le tue classi, pianifica esami e chiedi all'assistente AI."
+            ? "Gestisci le tue classi, pianifica verifiche e chiedi all'assistente AI."
             : "Mantieni il controllo dei tuoi studi con il tuo tutor AI."
         }
         actions={
@@ -128,7 +128,7 @@ export default function Dashboard() {
         />
         <StatCard
           icon={FileText}
-          label="Esami imminenti"
+          label="Verifiche scritte imminenti"
           value={(upcomingExams || []).length}
           hint="programmati in futuro"
           accent="accent"
@@ -265,21 +265,21 @@ export default function Dashboard() {
 
       {/* Upcoming exams */}
       <Card
-        title="Esami e interrogazioni imminenti"
+        title="Verifiche e interrogazioni imminenti"
         icon={FileText}
         action={
           <Link
             to="/exams"
             className="text-xs text-primary inline-flex items-center gap-1 hover:underline"
           >
-            Vedi tutti gli esami <ArrowRight className="size-3" />
+            Vedi tutte le verifiche <ArrowRight className="size-3" />
           </Link>
         }
       >
         {upcomingExams.length === 0 ? (
           <EmptyState
-            title="Nessun esame programmato"
-            description="Quando i docenti aggiungono esami, appariranno qui."
+            title="Nessuna verifica programmata"
+            description="Quando i docenti aggiungono verifiche, appariranno qui."
           />
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -290,7 +290,9 @@ export default function Dashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 className="rounded-lg border border-border/60 bg-gradient-to-br from-panel to-elevated/40 p-4 hover:ring-1 hover:ring-primary/30 transition-all"
               >
-                <Badge variant="accent">{e.subject || "Esame"}</Badge>
+                <Badge variant="accent">
+                  {e.subject || "Verifica scritta"}
+                </Badge>
                 <div className="mt-2 font-semibold tracking-tight">
                   {e.title}
                 </div>

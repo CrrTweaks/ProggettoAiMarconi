@@ -232,7 +232,7 @@ function RagAsk({ docIds, userId }) {
       setAnswer(data.answer);
       setSources(data.sources || []);
     } catch (e) {
-      toast.error(e.response?.data?.detail || "RAG query failed");
+      toast.error(e.response?.data?.detail || "Interrogazione RAG fallita");
     } finally {
       setLoading(false);
     }

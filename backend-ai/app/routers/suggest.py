@@ -1,6 +1,7 @@
 """/suggest · AI-powered scheduling helpers."""
 import json
 import re
+from datetime import date, datetime
 from fastapi import APIRouter
 from loguru import logger
 
@@ -8,6 +9,33 @@ from app.core.ollama_client import ollama
 from app.schemas.chat import SuggestExamRequest, SuggestExamResponse
 
 router = APIRouter()
+
+_IT_WEEKDAYS = [
+    "lunedì", "martedì", "mercoledì", "giovedì",
+    "venerdì", "sabato", "domenica",
+]
+_IT_MONTHS = [
+    "gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
+    "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre",
+]
+
+
+def _format_italian_date(value) -> str:
+    """Best-effort conversion of an arbitrary date-like value into
+    'lunedì 11 maggio 2026'. Returns the original string on failure."""
+    if isinstance(value, datetime):
+        d = value.date()
+    elif isinstance(value, date):
+        d = value
+    elif isinstance(value, str):
+        try:
+            # Handles "2026-05-11", "2026-05-11T22:00:00.000Z", etc.
+            d = datetime.fromisoformat(value.replace("Z", "+00:00")).date()
+        except ValueError:
+            return value
+    else:
+        return str(value)
+    return f"{_IT_WEEKDAYS[d.weekday()]} {d.day} {_IT_MONTHS[d.month - 1]} {d.year}"
 
 
 def _heuristic_score(day: dict) -> float:
@@ -28,20 +56,65 @@ async def suggest_exam_day(req: SuggestExamRequest):
     best = ranking[0] if ranking else {"day": "", "score": 0.0}
 
     # Optional LLM short rationale
-    reasoning = "Day with the lowest expected workload (fewer exams, interrogations and homework due)."
+    reasoning = "Giorno con il minor carico previsto (meno verifiche, interrogazioni e compiti da consegnare)."
+    best_label = _format_italian_date(best["day"])
+    # Build a workload summary with Italian human-readable dates for the LLM
+    workload_for_llm = [
+        {
+            "giorno": _format_italian_date(d.get("day")),
+            "compiti": d.get("homework", 0),
+            "verifiche": d.get("exams", 0),
+            "interrogazioni": d.get("interrogations", 0),
+        }
+        for d in workload
+    ]
     try:
         prompt = (
-            "Given this weekly school workload (one entry per day), choose the best "
-            "day to schedule a new exam to minimise student stress, and explain briefly. "
-            "Reply with one short paragraph (max 60 words). Workload:\n"
-            f"{json.dumps(workload, default=str)}"
+            "Il giorno migliore in cui programmare una nuova verifica è già stato "
+            f"scelto in modo deterministico: **{best_label}**.\n"
+            "Il tuo compito è SOLO spiegare brevemente PERCHÉ proprio quel giorno "
+            "è la scelta migliore, basandoti sui dati di carico scolastico qui sotto.\n\n"
+            "Regole assolute:\n"
+            "- NON proporre un giorno diverso da quello scelto.\n"
+            "- NON usare timestamp ISO o numeri: riferisciti al giorno SOLO come "
+            f"'{best_label}'.\n"
+            "- Rispondi in ITALIANO con UN SOLO paragrafo breve (max 50 parole).\n\n"
+            f"Giorno scelto: {best_label}\n"
+            f"Carico scolastico dei prossimi giorni (in italiano):\n"
+            f"{json.dumps(workload_for_llm, ensure_ascii=False)}"
         )
         out = await ollama.chat(
             [{"role": "user", "content": prompt}],
-            options={"temperature": 0.2},
+            options={"temperature": 0.1},
         )
-        # take first paragraph if the model rambles
-        reasoning = re.split(r"\n\n", out.strip(), maxsplit=1)[0][:400] or reasoning
+        candidate = re.split(r"\n\n", out.strip(), maxsplit=1)[0][:400].strip()
+
+        # Validate: the model must mention the chosen day and must NOT mention
+        # any other day from the workload. Otherwise fall back to deterministic.
+        other_days = [
+            _format_italian_date(d.get("day")).lower()
+            for d in workload
+            if _format_italian_date(d.get("day")) != best_label
+        ]
+        low = candidate.lower()
+        mentions_chosen = best_label.lower() in low
+        mentions_other = any(od in low for od in other_days if od)
+        # Also reject if the model leaked an ISO-like timestamp
+        has_iso_leak = bool(re.search(r"\d{4}-\d{2}-\d{2}", candidate))
+
+        if candidate and mentions_chosen and not mentions_other and not has_iso_leak:
+            reasoning = candidate
+        else:
+            logger.info(
+                "LLM rationale rejected (chosen={}, other={}, iso={}). Using fallback.",
+                mentions_chosen, mentions_other, has_iso_leak,
+            )
+            reasoning = (
+                f"{best_label.capitalize()} è il giorno con il minor carico "
+                f"({best.get('homework', 0)} compiti, {best.get('exams', 0)} verifiche, "
+                f"{best.get('interrogations', 0)} interrogazioni), quindi è la scelta "
+                "migliore per programmare una nuova verifica senza sovraccaricare gli studenti."
+            )
     except Exception as exc:
         logger.warning(f"LLM rationale unavailable: {exc}")
 

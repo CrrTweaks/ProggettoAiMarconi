@@ -28,6 +28,17 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 
+const NOTIF_LABEL = {
+  homework: "Compiti",
+  exam: "Verifica scritta",
+  interrogation: "Interrogazione",
+  lesson: "Lezione",
+  absence: "Assenza",
+  message: "Messaggio",
+  system: "Sistema",
+  ai: "AI",
+};
+
 export default function TopBar() {
   const { user, logout } = useAuth();
   const { togglePalette, toggleAIPanel } = useUI();
@@ -139,7 +150,7 @@ export default function TopBar() {
                 >
                   <div className="flex items-start gap-3">
                     <Badge variant={n.read_at ? "secondary" : "accent"}>
-                      {n.type}
+                      {NOTIF_LABEL[n.type] || n.type}
                     </Badge>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium truncate">

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, isAfter } from "date-fns";
-import { it } from "date-fns/locale";
+import { it as itLocale } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { GraduationCap, Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -48,7 +48,7 @@ export default function Interrogations() {
       <PageHeader
         icon={GraduationCap}
         title="Interrogazioni"
-        subtitle="Esami orali · pianificati e valutati"
+        subtitle="Verifiche orali · pianificate e valutate"
         actions={isTeacher ? <NewInterrogationDialog /> : null}
       />
       {isLoading ? (
@@ -77,7 +77,9 @@ export default function Interrogations() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <Badge variant="warning">{it.subject || "Esame orale"}</Badge>
+                  <Badge variant="warning">
+                    {it.subject || "Verifica orale"}
+                  </Badge>
                   {it.grade != null && (
                     <Badge variant="success">Voto: {it.grade}</Badge>
                   )}
@@ -93,7 +95,7 @@ export default function Interrogations() {
               <div className="text-right">
                 <div className="font-mono text-sm text-amber-300">
                   {format(parseISO(it.scheduled_for), "d MMM HH:mm", {
-                    locale: it,
+                    locale: itLocale,
                   })}
                 </div>
                 <div className="text-[11px] text-muted-fg">
@@ -171,7 +173,11 @@ function NewInterrogationDialog() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            create.mutate({ ...form, student_id: form.student_id || null });
+            const payload = { ...form };
+            if (!payload.student_id) delete payload.student_id;
+            if (!payload.subject) delete payload.subject;
+            if (!payload.topic) delete payload.topic;
+            create.mutate(payload);
           }}
           className="space-y-3"
         >

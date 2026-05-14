@@ -88,8 +88,8 @@ export default function Notifications() {
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <Badge variant={typeVariant(n.type)} className="capitalize">
-                      {n.type}
+                    <Badge variant={typeVariant(n.type)}>
+                      {typeLabel(n.type)}
                     </Badge>
                     <span className="text-[11px] text-muted-fg">
                       {formatDistanceToNow(parseISO(n.created_at), {
@@ -130,3 +130,15 @@ const typeVariant = (t) =>
     system: "secondary",
     ai: "accent",
   })[t] || "secondary";
+
+const typeLabel = (t) =>
+  ({
+    homework: "Compiti",
+    exam: "Verifica scritta",
+    interrogation: "Interrogazione",
+    lesson: "Lezione",
+    absence: "Assenza",
+    message: "Messaggio",
+    system: "Sistema",
+    ai: "AI",
+  })[t] || t;

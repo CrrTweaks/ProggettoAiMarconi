@@ -133,7 +133,7 @@ export default function Settings() {
           >
             <PrefRow
               title="Notifiche email"
-              subtitle="Ricevi un riepilogo di compiti, esami e suggerimenti AI"
+              subtitle="Ricevi un riepilogo di compiti, verifiche e suggerimenti AI"
               value={prefs.notifications_email}
               onChange={(v) =>
                 setPrefs((p) => ({ ...p, notifications_email: v }))

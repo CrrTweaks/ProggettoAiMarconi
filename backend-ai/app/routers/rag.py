@@ -22,12 +22,12 @@ async def upload_pdf(
     user_id: UUID = Form(...),
 ):
     if not file.filename or not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(400, "Only PDF files are accepted")
+        raise HTTPException(400, "Sono accettati solo file PDF")
 
     contents = await file.read()
     size_mb = len(contents) / (1024 * 1024)
     if size_mb > settings.MAX_PDF_MB:
-        raise HTTPException(413, f"PDF exceeds {settings.MAX_PDF_MB} MB limit")
+        raise HTTPException(413, f"Il PDF supera il limite di {settings.MAX_PDF_MB} MB")
 
     safe_name = f"{uuid.uuid4()}_{Path(file.filename).name}"
     target = Path(settings.UPLOAD_DIR) / safe_name
@@ -45,7 +45,7 @@ async def upload_pdf(
         raise HTTPException(422, str(exc))
     except Exception as exc:
         target.unlink(missing_ok=True)
-        raise HTTPException(500, f"Indexing failed: {exc}")
+        raise HTTPException(500, f"Indicizzazione fallita: {exc}")
 
     return {"ok": True, "document": result}
 
@@ -53,7 +53,7 @@ async def upload_pdf(
 @router.post("/query", response_model=RagQueryResponse)
 async def rag_query(req: RagQueryRequest):
     if not req.query or not req.query.strip():
-        raise HTTPException(400, "query required")
+        raise HTTPException(400, "query obbligatoria")
 
     sources = await rag_service.retrieve(
         user_id=req.user_id,

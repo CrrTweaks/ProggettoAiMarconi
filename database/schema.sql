@@ -167,7 +167,7 @@ CREATE INDEX idx_interrogations_class_date ON interrogations (class_id, schedule
 CREATE TABLE ai_chats (
   id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  title       VARCHAR(200) DEFAULT 'New chat',
+  title       VARCHAR(200) DEFAULT 'Nuova chat',
   model       VARCHAR(60)  DEFAULT 'llama3',
   context     JSONB        DEFAULT '{}',
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),

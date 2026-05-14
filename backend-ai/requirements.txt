@@ -6,7 +6,7 @@ python-multipart==0.0.10
 httpx==0.27.2
 
 # DB / vector
-psycopg[binary,pool]==3.2.3
+psycopg[binary,pool]==3.3.4
 pgvector==0.3.5
 sqlalchemy==2.0.35
 asyncpg==0.29.0
@@ -29,5 +29,5 @@ pydub==0.25.1
 
 # Utility
 python-dotenv==1.0.1
-numpy==1.26.4
+numpy
 loguru==0.7.2

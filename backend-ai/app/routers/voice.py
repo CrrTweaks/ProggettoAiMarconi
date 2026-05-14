@@ -15,12 +15,12 @@ async def transcribe(
     lang: str = Form("it-IT"),
 ):
     if not file.content_type or not file.content_type.startswith("audio"):
-        raise HTTPException(400, "Audio file required (audio/wav, audio/x-wav, audio/flac…)")
+        raise HTTPException(400, "File audio obbligatorio (audio/wav, audio/x-wav, audio/flac…)")
     data = await file.read()
     try:
         text = voice_service.transcribe_audio(data, lang=lang)
     except Exception as exc:
-        raise HTTPException(500, f"Transcription failed: {exc}")
+        raise HTTPException(500, f"Trascrizione fallita: {exc}")
     return {"text": text, "lang": lang}
 
 
@@ -31,7 +31,7 @@ async def tts(req: TTSRequest):
     except ValueError as exc:
         raise HTTPException(400, str(exc))
     except Exception as exc:
-        raise HTTPException(500, f"TTS failed: {exc}")
+        raise HTTPException(500, f"TTS fallito: {exc}")
     return StreamingResponse(
         io.BytesIO(audio),
         media_type="audio/mpeg",

@@ -22,6 +22,8 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { toast } from "sonner";
+
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +41,40 @@ const TYPE_STYLES = {
 export default function Calendar() {
   const [cursor, setCursor] = useState(new Date());
   const [selected, setSelected] = useState(new Date());
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiHint, setAiHint] = useState(null);
+
+  const { data: classes = [] } = useQuery({
+    queryKey: ["classes"],
+    queryFn: async () => (await api.get("/classes")).data.classes || [],
+  });
+
+  const askAI = async () => {
+    if (!classes.length) {
+      toast.warning("Devi prima creare o iscriverti a una classe");
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const week = format(
+        startOfWeek(selected, { weekStartsOn: 1 }),
+        "yyyy-MM-dd",
+      );
+      const { data } = await api.post("/ai/suggest/exam-day", {
+        class_id: classes[0].id,
+        week_start: week,
+      });
+      setAiHint(data);
+      const dayLabel = data.best_day
+        ? format(parseISO(data.best_day), "EEEE d MMMM", { locale: it })
+        : "—";
+      toast.success(`Giorno consigliato: ${dayLabel}`);
+    } catch (e) {
+      toast.error(e.response?.data?.error || "AI non disponibile");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const monthStart = startOfMonth(cursor);
   const monthEnd = endOfMonth(cursor);
@@ -79,7 +115,7 @@ export default function Calendar() {
       <PageHeader
         icon={CalendarIcon}
         title="Calendario"
-        subtitle="Orario scolastico, esami, compiti e suggerimenti AI"
+        subtitle="Orario scolastico, verifiche, compiti e suggerimenti AI"
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -235,10 +271,31 @@ export default function Calendar() {
               ))}
             </AnimatePresence>
           </div>
-          <div className="border-t border-border/40 p-3">
-            <Button variant="gradient" className="w-full">
-              <Sparkles className="size-4" /> AI · suggerisci un giorno libero
+          <div className="space-y-2 border-t border-border/40 p-3">
+            <Button
+              variant="gradient"
+              className="w-full"
+              onClick={askAI}
+              disabled={aiLoading}
+            >
+              <Sparkles className="size-4" />
+              {aiLoading ? "Sto pensando…" : "AI · suggerisci un giorno libero"}
             </Button>
+            {aiHint && (
+              <div className="rounded-md border border-border/40 bg-elevated/40 p-2 text-xs">
+                <div className="font-semibold text-primary">
+                  Giorno consigliato:{" "}
+                  {aiHint.best_day
+                    ? format(parseISO(aiHint.best_day), "EEEE d MMMM yyyy", {
+                        locale: it,
+                      })
+                    : "—"}
+                </div>
+                {aiHint.reasoning && (
+                  <div className="mt-1 text-muted-fg">{aiHint.reasoning}</div>
+                )}
+              </div>
+            )}
           </div>
         </aside>
       </div>

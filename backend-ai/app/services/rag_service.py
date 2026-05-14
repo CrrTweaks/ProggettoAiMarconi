@@ -116,7 +116,7 @@ SYSTEM_RAG = (
     "Sei un assistente allo studio AI. Rispondi alla domanda dell'utente usando SOLO i "
     "brani di contesto forniti quando pertinenti. Se il contesto non contiene la risposta, dillo "
     "onestamente. Cita sempre i numeri di pagina tra parentesi quadre come [p.3]. "
-    "Rispondi nella lingua dell'utente."
+    "Rispondi SEMPRE e SOLO in italiano."
 )
 
 
@@ -127,7 +127,7 @@ async def answer_with_context(
     history: Optional[List[dict]] = None,
 ) -> str:
     if not sources:
-        ctx = "(no relevant context found)"
+        ctx = "(nessun contesto pertinente trovato)"
     else:
         ctx = "\n\n".join(
             f"[p.{s['page']}] {s['content']}" for s in sources
@@ -136,6 +136,6 @@ async def answer_with_context(
     messages = [
         {"role": "system", "content": SYSTEM_RAG},
         *history,
-        {"role": "user",   "content": f"Context:\n{ctx}\n\nQuestion: {query}"},
+        {"role": "user",   "content": f"Contesto:\n{ctx}\n\nDomanda: {query}"},
     ]
     return await ollama.chat(messages, model=model)

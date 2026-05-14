@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════
 //  Centralised error handling
 // ════════════════════════════════════════════════════════════════
-import { logger } from '../config/logger.js';
+import { logger } from "../config/logger.js";
 
 export class HttpError extends Error {
   constructor(status, message, details = undefined) {
@@ -12,15 +12,15 @@ export class HttpError extends Error {
 }
 
 export const notFound = (req, res) =>
-  res.status(404).json({ error: 'Not found', path: req.originalUrl });
+  res.status(404).json({ error: "Non trovato", path: req.originalUrl });
 
 export const errorHandler = (err, req, res, _next) => {
   const status = err.status || 500;
   if (status >= 500) logger.error({ err, path: req.originalUrl }, err.message);
-  else                logger.warn({ status, path: req.originalUrl }, err.message);
+  else logger.warn({ status, path: req.originalUrl }, err.message);
 
   res.status(status).json({
-    error: err.message || 'Internal server error',
+    error: err.message || "Errore interno del server",
     ...(err.details ? { details: err.details } : {}),
   });
 };

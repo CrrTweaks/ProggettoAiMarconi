@@ -10,7 +10,7 @@ from app.core.config import settings
 class OllamaClient:
     def __init__(self, host: str | None = None) -> None:
         self.host = (host or settings.OLLAMA_HOST).rstrip("/")
-        self._http = httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=10.0))
+        self._http = httpx.AsyncClient(timeout=httpx.Timeout(600.0, connect=10.0))
 
     async def aclose(self) -> None:
         await self._http.aclose()

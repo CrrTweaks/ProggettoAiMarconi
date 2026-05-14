@@ -38,7 +38,7 @@ export default function Exams() {
     mutationFn: (id) => api.delete(`/exams/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["exams"] });
-      toast.success("Esame eliminato");
+      toast.success("Verifica eliminata");
     },
   });
 
@@ -52,8 +52,8 @@ export default function Exams() {
     <div className="space-y-6">
       <PageHeader
         icon={FileText}
-        title="Esami"
-        subtitle="Test e valutazioni programmati"
+        title="Verifiche scritte"
+        subtitle="Verifiche e valutazioni programmate"
         actions={isTeacher ? <NewExamDialog /> : null}
       />
       {isLoading ? (
@@ -88,7 +88,7 @@ function Group({ title, items, isTeacher, onDelete, dim }) {
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-muted-fg">
           {title}
         </h2>
-        <EmptyState title={`Nessun esame ${title.toLowerCase()}`} />
+        <EmptyState title={`Nessuna verifica ${title.toLowerCase()}`} />
       </section>
     );
   return (
@@ -110,7 +110,7 @@ function Group({ title, items, isTeacher, onDelete, dim }) {
             )}
           >
             <div className="flex items-start justify-between">
-              <Badge variant="accent">{e.subject || "Esame"}</Badge>
+              <Badge variant="accent">{e.subject || "Verifica scritta"}</Badge>
               {isTeacher && (
                 <Button
                   variant="ghost"
@@ -183,7 +183,7 @@ function NewExamDialog() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["exams"] });
       qc.invalidateQueries({ queryKey: ["calendar"] });
-      toast.success("Esame programmato");
+      toast.success("Verifica programmata");
       setOpen(false);
     },
     onError: (e) => toast.error(e.response?.data?.error || "Impossibile"),
@@ -220,12 +220,12 @@ function NewExamDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="gradient">
-          <Plus className="size-4" /> Nuovo esame
+          <Plus className="size-4" /> Nuova verifica
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Pianifica esame</DialogTitle>
+          <DialogTitle>Pianifica verifica scritta</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
           <div className="space-y-1.5">

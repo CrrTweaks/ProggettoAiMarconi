@@ -12,9 +12,9 @@ router = APIRouter()
 @router.post("", response_model=ConceptMapResponse)
 async def build_concept_map(req: ConceptMapRequest):
     if not req.user_id:
-        raise HTTPException(400, "user_id required")
+        raise HTTPException(400, "user_id obbligatorio")
     if not req.text and not req.document_id:
-        raise HTTPException(400, "Provide either 'text' or 'document_id'")
+        raise HTTPException(400, "Fornire 'text' oppure 'document_id'")
 
     text = req.text or ""
     if req.document_id:
@@ -27,7 +27,7 @@ async def build_concept_map(req: ConceptMapRequest):
                 )
                 row = await cur.fetchone()
                 if not row or not row.get("text"):
-                    raise HTTPException(404, "PDF document not found or empty")
+                    raise HTTPException(404, "Documento PDF non trovato o vuoto")
                 text = (text + "\n\n" + row["text"]) if text else row["text"]
 
     try:
@@ -40,7 +40,7 @@ async def build_concept_map(req: ConceptMapRequest):
         raise HTTPException(422, str(exc))
     except Exception as exc:
         logger.exception("Concept map generation failed")
-        raise HTTPException(500, f"Generation failed: {exc}")
+        raise HTTPException(500, f"Generazione fallita: {exc}")
 
     title = req.title or graph["title"]
     map_id = await concept_map_service.save_concept_map(
