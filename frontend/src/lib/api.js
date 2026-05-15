@@ -49,10 +49,15 @@ api.interceptors.response.use(
   (r) => r,
   async (err) => {
     const original = err.config;
+    // Escludi solo refresh e login per evitare loop di refresh,
+    // ma consenti il retry automatico per /auth/me e tutte le altre route.
+    const url = original?.url || "";
+    const isRefreshOrLogin =
+      url.includes("/auth/refresh") || url.includes("/auth/login");
     if (
       err.response?.status === 401 &&
       !original?._retry &&
-      !original?.url?.includes("/auth/")
+      !isRefreshOrLogin
     ) {
       original._retry = true;
       try {

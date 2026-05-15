@@ -35,7 +35,7 @@ export const env = {
     process.env.JWT_ACCESS_SECRET || "dev-access-secret-change-me",
   JWT_REFRESH_SECRET:
     process.env.JWT_REFRESH_SECRET || "dev-refresh-secret-change-me",
-  JWT_ACCESS_EXPIRES: process.env.JWT_ACCESS_EXPIRES || "15m",
+  JWT_ACCESS_EXPIRES: process.env.JWT_ACCESS_EXPIRES || "1h",
   JWT_REFRESH_EXPIRES: process.env.JWT_REFRESH_EXPIRES || "7d",
 
   // Rate-limit

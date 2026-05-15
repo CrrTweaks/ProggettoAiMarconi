@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Brain,
@@ -22,6 +20,7 @@ import { cn, formatDate } from "@/lib/utils";
 
 import PageHeader from "@/components/shared/PageHeader";
 import EmptyState from "@/components/shared/EmptyState";
+import MarkdownAnswer from "@/components/shared/MarkdownAnswer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -133,9 +132,9 @@ export default function RagPdf() {
         </AnimatePresence>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_440px] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] gap-6">
         {/* Elenco documenti */}
-        <section>
+        <section className="min-w-0">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-muted-fg">
             I tuoi documenti · {docs.length}
           </h2>
@@ -239,7 +238,7 @@ function RagAsk({ docIds, userId }) {
   };
 
   return (
-    <aside className="rounded-xl border border-border/60 bg-panel/60 backdrop-blur-xl shadow-card overflow-hidden">
+    <aside className="min-w-0 rounded-xl border border-border/60 bg-panel/60 backdrop-blur-xl shadow-card overflow-hidden flex flex-col">
       <div className="border-b border-border/40 p-4">
         <div className="flex items-center gap-2 font-semibold">
           <Sparkles className="size-4 text-accent" /> Chiedi ai tuoi PDF
@@ -250,13 +249,13 @@ function RagAsk({ docIds, userId }) {
             : `Limitato a ${docIds.length} documento${docIds.length !== 1 ? "i" : ""} selezionato${docIds.length !== 1 ? "i" : ""}`}
         </div>
       </div>
-      <div className="p-4">
+      <div className="p-4 flex flex-col min-w-0">
         <div className="flex gap-2">
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && ask()}
-            placeholder="Qual è la formula per…?"
+            placeholder="Qual è la formula per…? Fammi un quiz su… Riassumi…"
           />
           <Button
             onClick={ask}
@@ -271,54 +270,71 @@ function RagAsk({ docIds, userId }) {
           </Button>
         </div>
 
-        <ScrollArea className="mt-4 max-h-[60vh]">
-          {!answer && !loading && (
-            <div className="text-xs text-muted-fg flex items-center gap-1.5">
-              <Search className="size-3.5" /> Suggerimento: sii specifico per
-              risposte migliori.
-            </div>
-          )}
-          {loading && (
-            <div className="flex items-center gap-2 text-sm text-muted-fg pt-2">
-              <Loader2 className="size-3 animate-spin" /> Ricerca nel corpus…
-            </div>
-          )}
-          {answer && (
-            <div className="space-y-3">
-              <div className="rounded-lg bg-elevated/50 p-3 text-sm">
-                <div className="prose prose-invert prose-sm max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {answer}
-                  </ReactMarkdown>
-                </div>
+        {/* Suggerimenti rapidi */}
+        {!answer && !loading && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {[
+              "Fammi un quiz su…",
+              "Riassumi i punti chiave",
+              "Spiega il concetto di…",
+            ].map((s) => (
+              <button
+                key={s}
+                onClick={() => setQ(s)}
+                className="rounded-full border border-border/60 bg-elevated/40 hover:bg-primary/10 hover:border-primary/40 px-3 py-1 text-[11px] text-muted-fg hover:text-primary transition-colors"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <ScrollArea className="mt-4 max-h-[70vh] min-w-0">
+          <div className="min-w-0 pr-1">
+            {!answer && !loading && (
+              <div className="text-xs text-muted-fg flex items-center gap-1.5">
+                <Search className="size-3.5" /> Suggerimento: sii specifico per
+                risposte migliori.
               </div>
-              {sources.length > 0 && (
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-widest text-muted-fg mb-2">
-                    Fonti
-                  </div>
-                  <div className="space-y-2">
-                    {sources.map((s) => (
-                      <div
-                        key={s.chunk_id}
-                        className="rounded-md border border-border/60 bg-bg/40 p-2 text-xs"
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <Badge variant="secondary">pag. {s.page}</Badge>
-                          <span className="font-mono text-muted-fg">
-                            {(s.similarity * 100).toFixed(0)}%
-                          </span>
-                        </div>
-                        <p className="text-muted-fg line-clamp-3">
-                          {s.content}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+            )}
+            {loading && (
+              <div className="flex items-center gap-2 text-sm text-muted-fg pt-2">
+                <Loader2 className="size-3 animate-spin" /> Ricerca nel corpus…
+              </div>
+            )}
+            {answer && (
+              <div className="space-y-4 min-w-0">
+                <div className="rounded-xl bg-elevated/40 border border-border/40 p-4 min-w-0">
+                  <MarkdownAnswer content={answer} />
                 </div>
-              )}
-            </div>
-          )}
+                {sources.length > 0 && (
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-widest text-muted-fg mb-2 flex items-center gap-2">
+                      <Search className="size-3.5" /> Fonti ({sources.length})
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {sources.map((s) => (
+                        <div
+                          key={s.chunk_id}
+                          className="rounded-lg border border-border/60 bg-bg/40 p-2.5 text-xs min-w-0"
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <Badge variant="secondary">pag. {s.page}</Badge>
+                            <span className="font-mono text-[10px] text-muted-fg">
+                              {(s.similarity * 100).toFixed(0)}%
+                            </span>
+                          </div>
+                          <p className="text-muted-fg line-clamp-3 break-words">
+                            {s.content}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </ScrollArea>
       </div>
     </aside>

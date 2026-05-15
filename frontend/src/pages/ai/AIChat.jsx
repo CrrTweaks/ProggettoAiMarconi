@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
@@ -23,7 +21,7 @@ import { cn } from "@/lib/utils";
 
 import PageHeader from "@/components/shared/PageHeader";
 import EmptyState from "@/components/shared/EmptyState";
-import QuizRenderer from "@/components/shared/QuizRenderer";
+import MarkdownAnswer from "@/components/shared/MarkdownAnswer";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -42,7 +40,7 @@ export default function AIChat() {
   const [chatId, setChatId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const [model, setModel] = useState("llama3");
+  const [model, setModel] = useState("mistral");
   const [useRag, setUseRag] = useState(false);
   const [docIds, setDocIds] = useState([]);
   const [streaming, setStreaming] = useState(false);
@@ -423,7 +421,7 @@ function Bubble({ message, onSpeak }) {
       )}
       <div
         className={cn(
-          "rounded-2xl px-4 py-2.5 text-sm",
+          "min-w-0 rounded-2xl px-4 py-2.5 text-sm",
           isUser
             ? "max-w-[75%] bg-primary/15 text-fg ring-1 ring-primary/30 rounded-br-md"
             : isQuiz
@@ -431,15 +429,15 @@ function Bubble({ message, onSpeak }) {
               : "max-w-[75%] bg-elevated/70 text-fg rounded-bl-md",
         )}
       >
-        <div className="prose prose-invert prose-sm max-w-none prose-p:my-1.5 prose-pre:my-2 prose-headings:my-2">
-          {isQuiz ? (
-            <QuizRenderer content={message.content} />
-          ) : (
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {message.content || (isUser ? "" : "…")}
-            </ReactMarkdown>
-          )}
-        </div>
+        {isUser ? (
+          <p className="whitespace-pre-wrap break-words leading-relaxed">
+            {message.content}
+          </p>
+        ) : message.content ? (
+          <MarkdownAnswer content={message.content} />
+        ) : (
+          <span className="text-muted-fg">…</span>
+        )}
         {!isUser && message.sources?.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {message.sources.map((s, i) => (

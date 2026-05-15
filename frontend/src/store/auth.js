@@ -15,7 +15,21 @@ export const useAuth = create(
         if (get().initialised) return;
         set({ loading: true });
         try {
+          // Se non abbiamo un access token ma c'è un refresh, prova a rinnovare
+          // prima di interrogare /auth/me, così non sloggiamo l'utente a vuoto.
+          if (!tokens.access && tokens.refresh) {
+            try {
+              const { data } = await api.post("/auth/refresh", {
+                refresh_token: tokens.refresh,
+              });
+              tokens.set(data.access_token, data.refresh_token);
+            } catch {
+              tokens.clear();
+            }
+          }
           if (tokens.access) {
+            // L'interceptor di api.js si occuperà di un eventuale refresh
+            // se l'access token è scaduto.
             const { data } = await api.get("/auth/me");
             set({ user: data.user });
             connectSocket();

@@ -145,7 +145,19 @@ async def chat_stream(req: ChatRequest):
                 full.append(chunk)
                 yield f"data: {json.dumps({'event': 'chunk', 'data': chunk})}\n\n"
         except Exception as exc:
-            yield f"data: {json.dumps({'event': 'error', 'data': str(exc)})}\n\n"
+            # Logga sempre l'errore lato server, altrimenti rimarrebbe nascosto
+            # dentro lo stream SSE (HTTP risponde 200 ma l'evento è 'error').
+            logger.exception(f"Ollama stream failed (model={model})")
+            detail = str(exc)
+            # httpx 4xx/5xx → estrai il messaggio di Ollama, tipicamente JSON
+            resp = getattr(exc, "response", None)
+            if resp is not None:
+                try:
+                    body = resp.json()
+                    detail = body.get("error") or body.get("message") or detail
+                except Exception:
+                    detail = (resp.text or detail)[:300]
+            yield f"data: {json.dumps({'event': 'error', 'data': f'Errore Ollama: {detail}'})}\n\n"
             return
 
         reply = "".join(full)
