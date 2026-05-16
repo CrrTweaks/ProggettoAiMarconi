@@ -1,6 +1,7 @@
-# Docker Compose per Linux (Docker Engine nativo)
-# Su Linux host.docker.internal non è risolvibile di default,
-# quindi aggiungiamo extra_hosts al servizio backend-ai.
+# Docker Compose per Windows (Docker Desktop + WSL2)
+# Usa questo file se sei su Windows:
+#   docker compose -f docker-compose.windows.yml up
+#   docker compose -f docker-compose.windows.yml up --build
 
 services:
   # ──────────────── Postgres (with pgvector) ────────────────
@@ -61,8 +62,6 @@ services:
       OLLAMA_DEFAULT_MODEL: mistral
       AI_HOST: 0.0.0.0
       AI_PORT: 8000
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy

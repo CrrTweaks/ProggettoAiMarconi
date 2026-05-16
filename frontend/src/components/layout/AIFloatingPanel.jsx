@@ -110,7 +110,7 @@ export default function AIFloatingPanel() {
                   <Sparkles className="size-4 text-white" />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold">Aria · Tutor AI</div>
+                  <div className="text-sm font-semibold">Tony · Tutor AI</div>
                   <div className="text-[10px] text-muted-fg">
                     LLM locale via Ollama
                   </div>
@@ -129,7 +129,7 @@ export default function AIFloatingPanel() {
               <div ref={scrollRef} className="py-4 space-y-3">
                 {messages.length === 0 && (
                   <div className="rounded-lg border border-dashed border-border/60 p-4 text-sm text-muted-fg">
-                    Ciao {user?.full_name?.split(" ")[0] || ""}! Sono Aria, il
+                    Ciao {user?.full_name?.split(" ")[0] || ""}! Sono Tony, il
                     tuo tutor AI. Chiedimi spiegazioni, riassunti o quiz: ti
                     aiuto a studiare.
                   </div>

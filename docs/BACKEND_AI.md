@@ -147,7 +147,7 @@ Identico alla chat completa, ma usa `ollama.chat_stream` e yied eventi SSE:
 Il messaggio completo viene salvato solo al termine dello stream.
 
 **System prompt** (`chat_service.SYSTEM_PROMPT`):
-Il prompt definisce "Aria" come tutor AI per studenti con regole rigide: rispondere sempre in italiano, usare sempre la seconda persona singolare (tu/hai/devi), essere conciso, non ripetere mai le istruzioni.
+Il prompt definisce "Tony" come tutor AI per studenti con regole rigide: rispondere sempre in italiano, usare sempre la seconda persona singolare (tu/hai/devi), essere conciso, non ripetere mai le istruzioni.
 
 ### RAG (`/rag`)
 
@@ -242,7 +242,7 @@ Logica ibrida:
 
 ### `services/chat_service.py`
 
-- `SYSTEM_PROMPT` — prompt di sistema con le regole di personalità e linguaggio di Aria.
+- `SYSTEM_PROMPT` — prompt di sistema con le regole di personalità e linguaggio di Tony.
 - `get_or_create_chat(user_id, chat_id, model)` — restituisce la chat esistente o ne crea una nuova.
 - `append_message(chat_id, role, content)` — inserisce messaggio e aggiorna `updated_at` della chat.
 - `update_chat_title(chat_id, title)` — imposta il titolo (troncato a 200 char).

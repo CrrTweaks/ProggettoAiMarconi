@@ -85,7 +85,7 @@ export default function Sidebar() {
                   className="flex flex-col"
                 >
                   <span className="text-sm font-bold tracking-tight">
-                    AI School
+                    Scuola AI
                   </span>
                   <span className="text-[10px] uppercase tracking-widest text-muted-fg">
                     Workspace

@@ -87,7 +87,7 @@ export default function VoicePage() {
       setAudioUrl(url);
       setTimeout(() => audioRef.current?.play().catch(() => {}), 50);
     } catch (e) {
-      toast.error(e.response?.data?.detail || "TTS fallito");
+      toast.error(e.response?.data?.detail || "Sintesi vocale fallita");
     } finally {
       setSynth(false);
     }
@@ -98,7 +98,7 @@ export default function VoicePage() {
       <PageHeader
         icon={Mic}
         title="AI Vocale"
-        subtitle="Speech-to-text e text-to-speech, nella tua lingua"
+        subtitle="Riconoscimento e sintesi vocale, nella tua lingua"
         actions={
           <select
             value={lang}
@@ -192,11 +192,11 @@ export default function VoicePage() {
             className="mt-2 w-full"
             onClick={() => {
               setTts(transcript);
-              toast("Inviato a TTS");
+              toast("Testo inviato alla sintesi vocale");
             }}
             disabled={!transcript}
           >
-            <Wand2 className="size-4" /> Invia a text-to-speech
+            <Wand2 className="size-4" /> Invia alla sintesi vocale
           </Button>
         </motion.div>
 

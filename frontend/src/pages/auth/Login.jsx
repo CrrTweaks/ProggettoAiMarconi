@@ -28,7 +28,7 @@ export default function Login() {
   };
 
   return (
-    <AuthLayout title="Bentornato" subtitle="Accedi al tuo AI School Workspace">
+    <AuthLayout title="Bentornato" subtitle="Accedi al tuo Workspace Scolastico AI">
       <form onSubmit={submit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -101,8 +101,8 @@ export default function Login() {
         <div className="font-semibold text-fg mb-1">Account demo</div>
         <div className="grid gap-0.5 font-mono">
           <div>admin@school.test · Admin123!</div>
-          <div>teacher@school.test · Teacher123!</div>
-          <div>student@school.test · Student123!</div>
+          <div>rossi@school.test · Teacher123!</div>
+          <div>conti@school.test · Student123!</div>
         </div>
       </div>
     </AuthLayout>
@@ -135,10 +135,10 @@ export function AuthLayout({ title, subtitle, children }) {
             </div>
             <div>
               <div className="text-lg font-bold tracking-tight">
-                AI School Workspace
+                Workspace Scolastico AI
               </div>
               <div className="text-xs text-muted-fg uppercase tracking-widest">
-                Premium SaaS
+                Piattaforma Premium
               </div>
             </div>
           </Link>
@@ -158,7 +158,7 @@ export function AuthLayout({ title, subtitle, children }) {
                 ["AI Locale", "via Ollama"],
                 ["PDF RAG", "pgvector + LangChain"],
                 ["Mappe Concettuali", "generate dall'AI"],
-                ["Voce", "STT + TTS"],
+                ["Voce", "Riconoscimento e sintesi"],
               ].map(([t, s]) => (
                 <div
                   key={t}
@@ -172,7 +172,7 @@ export function AuthLayout({ title, subtitle, children }) {
           </div>
 
           <div className="text-xs text-muted-fg">
-            © 2026 AI School Workspace · Realizzato con React, FastAPI & Ollama
+            © 2026 Workspace Scolastico AI · Realizzato con React, FastAPI e Ollama
           </div>
         </motion.div>
 
@@ -188,7 +188,7 @@ export function AuthLayout({ title, subtitle, children }) {
                 <Sparkles className="size-5 text-white" />
               </div>
               <div className="font-bold tracking-tight">
-                AI School Workspace
+                Workspace Scolastico AI
               </div>
             </div>
             <h1 className="text-2xl font-bold tracking-tight">{title}</h1>

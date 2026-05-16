@@ -43,7 +43,7 @@ export default function Register() {
   return (
     <AuthLayout
       title="Crea il tuo account"
-      subtitle="Entra in AI School Workspace in pochi secondi"
+      subtitle="Entra nel Workspace Scolastico AI in pochi secondi"
     >
       <form onSubmit={submit} className="space-y-4">
         <div className="space-y-2">

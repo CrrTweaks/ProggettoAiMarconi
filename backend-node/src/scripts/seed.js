@@ -4,25 +4,43 @@ import "dotenv/config";
 import { pool, query } from "../config/db.js";
 import { hashPassword } from "../utils/password.js";
 
+// Account demo creati da database/seed.sql.
+// Questo script aggiorna le password con hash bcrypt validi.
+// Vedi docs/SEED_DATA.md per la tabella completa delle credenziali.
+const TEACHER_PWD = "Teacher123!";
+const STUDENT_PWD = "Student123!";
+
 const ACCOUNTS = [
-  {
-    email: "admin@school.test",
-    password: "Admin123!",
-    full_name: "Admin User",
-    role: "admin",
-  },
-  {
-    email: "teacher@school.test",
-    password: "Teacher123!",
-    full_name: "Maria Rossi",
-    role: "teacher",
-  },
-  {
-    email: "student@school.test",
-    password: "Student123!",
-    full_name: "Luca Bianchi",
-    role: "student",
-  },
+  // Admin
+  { email: "admin@school.test",    password: "Admin123!", full_name: "Admin School",     role: "admin"   },
+
+  // Teachers
+  { email: "rossi@school.test",    password: TEACHER_PWD, full_name: "Maria Rossi",      role: "teacher" },
+  { email: "verdi@school.test",    password: TEACHER_PWD, full_name: "Giovanni Verdi",   role: "teacher" },
+  { email: "bianchi@school.test",  password: TEACHER_PWD, full_name: "Anna Bianchi",     role: "teacher" },
+  { email: "ferrari@school.test",  password: TEACHER_PWD, full_name: "Paolo Ferrari",    role: "teacher" },
+  { email: "esposito@school.test", password: TEACHER_PWD, full_name: "Lucia Esposito",   role: "teacher" },
+
+  // Students 3A
+  { email: "conti@school.test",    password: STUDENT_PWD, full_name: "Luca Conti",       role: "student" },
+  { email: "romano@school.test",   password: STUDENT_PWD, full_name: "Sofia Romano",     role: "student" },
+  { email: "galli@school.test",    password: STUDENT_PWD, full_name: "Marco Galli",      role: "student" },
+  { email: "marini@school.test",   password: STUDENT_PWD, full_name: "Giulia Marini",    role: "student" },
+  { email: "greco@school.test",    password: STUDENT_PWD, full_name: "Davide Greco",     role: "student" },
+
+  // Students 4B
+  { email: "bruno@school.test",    password: STUDENT_PWD, full_name: "Chiara Bruno",     role: "student" },
+  { email: "rizzi@school.test",    password: STUDENT_PWD, full_name: "Matteo Rizzi",     role: "student" },
+  { email: "fontana@school.test",  password: STUDENT_PWD, full_name: "Alessia Fontana",  role: "student" },
+  { email: "caruso@school.test",   password: STUDENT_PWD, full_name: "Riccardo Caruso",  role: "student" },
+  { email: "lombardi@school.test", password: STUDENT_PWD, full_name: "Martina Lombardi", role: "student" },
+
+  // Students 5A
+  { email: "moretti@school.test",  password: STUDENT_PWD, full_name: "Andrea Moretti",   role: "student" },
+  { email: "barbieri@school.test", password: STUDENT_PWD, full_name: "Elena Barbieri",   role: "student" },
+  { email: "mancini@school.test",  password: STUDENT_PWD, full_name: "Federico Mancini", role: "student" },
+  { email: "colombo@school.test",  password: STUDENT_PWD, full_name: "Sara Colombo",     role: "student" },
+  { email: "rinaldi@school.test",  password: STUDENT_PWD, full_name: "Tommaso Rinaldi",  role: "student" },
 ];
 
 (async () => {

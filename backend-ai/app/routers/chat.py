@@ -13,6 +13,25 @@ from app.services import chat_service, rag_service, school_context_service
 router = APIRouter()
 
 
+_SCHOOL_KEYWORDS = (
+    "compit", "verific", "esam", "interrog", "lezion", "argoment",
+    "materi", "scuola", "studi", "ripass", "prossim", "scaden",
+    "quando", "settiman", "calendar", "agenda", "homework", "exam",
+    "test", "quiz",
+)
+
+
+def _is_school_related(req_messages: list) -> bool:
+    """Heuristica: il contesto scolastico va iniettato solo se l'ultimo
+    messaggio utente parla effettivamente di scuola, altrimenti il modello
+    tende ad allucinare dati che non c'entrano nulla con la domanda."""
+    last = next((m for m in reversed(req_messages) if m.role == "user"), None)
+    if not last:
+        return False
+    text = (last.content or "").lower()
+    return any(k in text for k in _SCHOOL_KEYWORDS)
+
+
 def _build_messages(
     history: list[dict],
     req_messages: list,
@@ -20,14 +39,16 @@ def _build_messages(
     school_context: str | None = None,
 ) -> list[dict]:
     msgs: list[dict] = [{"role": "system", "content": chat_service.SYSTEM_PROMPT}]
-    if school_context:
+    if school_context and _is_school_related(req_messages):
         msgs.append({
             "role": "system",
             "content": (
-                "Quando l'utente fa domande sui suoi compiti, verifiche, interrogazioni "
-                "o argomenti, rispondi usando ESCLUSIVAMENTE i seguenti dati reali. "
-                "Se la risposta non è presente in questi dati, dillo chiaramente "
-                "invece di inventare.\n\n" + school_context
+                "L'utente ha fatto una domanda relativa alla scuola. Rispondi "
+                "usando ESCLUSIVAMENTE i dati reali qui sotto. Se l'informazione "
+                "richiesta non è presente, dillo chiaramente: NON inventare voci "
+                "di compiti, verifiche o interrogazioni che non compaiono "
+                "esplicitamente in questi dati. Non citare questi dati per "
+                "saluti o domande generiche.\n\n" + school_context
             ),
         })
     if rag_context:
@@ -69,7 +90,10 @@ async def chat(req: ChatRequest):
         if sources:
             rag_context = "\n\n".join(f"[p.{s['page']}] {s['content']}" for s in sources)
 
-    school_context = await school_context_service.build_user_context(req.user_id)
+    school_context = (
+        await school_context_service.build_user_context(req.user_id)
+        if _is_school_related(req.messages) else None
+    )
 
     history = await chat_service.load_history(chat_id, limit=20)
     history = history[:-1]  # remove the last user msg we just inserted, keep prior context
@@ -120,7 +144,10 @@ async def chat_stream(req: ChatRequest):
         if sources:
             rag_context = "\n\n".join(f"[p.{s['page']}] {s['content']}" for s in sources)
 
-    school_context = await school_context_service.build_user_context(req.user_id)
+    school_context = (
+        await school_context_service.build_user_context(req.user_id)
+        if _is_school_related(req.messages) else None
+    )
 
     history = await chat_service.load_history(chat_id, limit=20)
     history = history[:-1]

@@ -357,6 +357,13 @@ function EventRow({ event }) {
     lesson: "bg-emerald-500/15 text-emerald-300 border-emerald-500/20",
     event: "bg-elevated text-muted-fg border-border",
   };
+  const labels = {
+    homework: "Compiti",
+    exam: "Verifica scritta",
+    interrogation: "Interrogazione",
+    lesson: "Lezione",
+    event: "Evento",
+  };
   return (
     <li className="flex items-center gap-3 rounded-lg border border-border/60 bg-elevated/30 p-3">
       <span
@@ -365,7 +372,7 @@ function EventRow({ event }) {
           colors[event.type],
         )}
       >
-        {event.type}
+        {labels[event.type] || event.type}
       </span>
       <div className="min-w-0 flex-1">
         <div className="text-sm font-medium truncate">{event.title}</div>

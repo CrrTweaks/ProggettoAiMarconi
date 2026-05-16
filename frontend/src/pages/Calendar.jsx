@@ -38,6 +38,14 @@ const TYPE_STYLES = {
   event: "bg-elevated text-muted-fg",
 };
 
+const TYPE_LABELS = {
+  homework: "Compiti",
+  exam: "Verifica scritta",
+  interrogation: "Interrogazione",
+  lesson: "Lezione",
+  event: "Evento",
+};
+
 export default function Calendar() {
   const [cursor, setCursor] = useState(new Date());
   const [selected, setSelected] = useState(new Date());
@@ -253,7 +261,7 @@ export default function Calendar() {
                       variant="secondary"
                       className={cn("capitalize", TYPE_STYLES[ev.type])}
                     >
-                      {ev.type}
+                      {TYPE_LABELS[ev.type] || ev.type}
                     </Badge>
                     <span className="text-xs font-mono text-muted-fg">
                       {format(parseISO(ev.start_at), "HH:mm")}

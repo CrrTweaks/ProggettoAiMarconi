@@ -47,6 +47,10 @@ export default function AIChat() {
   const [recording, setRecording] = useState(false);
   const scrollRef = useRef(null);
   const recRef = useRef(null);
+  // Quando il chat_id arriva dal meta SSE non dobbiamo ricaricare la
+  // cronologia: rimpiazzerebbe lo state ottimistico (utente + placeholder
+  // assistant), facendo finire i chunk dentro il messaggio dell'utente.
+  const skipNextLoadRef = useRef(false);
 
   // Elenco chat
   const { data: chats = [] } = useQuery({
@@ -64,6 +68,10 @@ export default function AIChat() {
   // Carica la cronologia quando si cambia chat
   useEffect(() => {
     let cancelled = false;
+    if (skipNextLoadRef.current) {
+      skipNextLoadRef.current = false;
+      return;
+    }
     (async () => {
       if (!chatId) {
         setMessages([]);
@@ -119,7 +127,10 @@ export default function AIChat() {
         documentIds: docIds,
         messages: [...messages, userMsg],
         onMeta: (meta) => {
-          if (meta?.chat_id) setChatId(meta.chat_id);
+          if (meta?.chat_id && meta.chat_id !== chatId) {
+            skipNextLoadRef.current = true;
+            setChatId(meta.chat_id);
+          }
           setMessages((m) => {
             const arr = [...m];
             arr[arr.length - 1] = {
@@ -204,7 +215,7 @@ export default function AIChat() {
       const audio = new Audio(url);
       audio.play();
     } catch {
-      toast.error("TTS fallito");
+      toast.error("Sintesi vocale fallita");
     }
   };
 
@@ -259,7 +270,7 @@ export default function AIChat() {
         <PageHeader
           className="m-4 mb-2"
           icon={Sparkles}
-          title="Aria · Tutor AI"
+          title="Tony · Tutor AI"
           subtitle="LLM locale via Ollama · risposte in streaming"
           actions={
             <div className="flex items-center gap-2">
@@ -345,7 +356,7 @@ export default function AIChat() {
               </AnimatePresence>
               {streaming && (
                 <div className="flex items-center gap-2 text-xs text-muted-fg pl-1">
-                  <Loader2 className="size-3 animate-spin" /> Aria sta pensando…
+                  <Loader2 className="size-3 animate-spin" /> Tony sta pensando…
                 </div>
               )}
             </div>
@@ -375,7 +386,7 @@ export default function AIChat() {
                   send();
                 }
               }}
-              placeholder="Scrivi a Aria…"
+              placeholder="Scrivi a Tony…"
               className="min-h-[44px] max-h-40 flex-1"
             />
             <Button
