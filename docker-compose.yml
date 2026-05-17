@@ -57,18 +57,41 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/aischool
-      OLLAMA_HOST: http://host.docker.internal:11434
+      OLLAMA_HOST: http://ollama:11434
       OLLAMA_DEFAULT_MODEL: mistral
       AI_HOST: 0.0.0.0
       AI_PORT: 8000
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
+      ollama:
+        condition: service_started
     volumes:
       - ./backend-ai:/app
       - ai_uploads:/app/uploads
+
+  # ──────────────── Ollama (LLM locale) ────────────────
+  # Gira nello stesso network di compose così backend-ai lo raggiunge
+  # via il nome di servizio "ollama". Il volume ~/.ollama monta i modelli
+  # già scaricati sull'host (mistral, llama3, nomic-embed-text, ecc.).
+  ollama:
+    image: ollama/ollama:latest
+    container_name: aiws-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    entrypoint: ["/entrypoint.sh"]
+    volumes:
+      - ${HOME}/.ollama:/root/.ollama
+      - ./docker/ollama-entrypoint.sh:/entrypoint.sh:ro
+    # Decommenta se hai GPU NVIDIA + nvidia-container-toolkit
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
 
   # ──────────────── Frontend ────────────────
   frontend:
