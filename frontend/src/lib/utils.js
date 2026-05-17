@@ -34,3 +34,13 @@ export const initials = (name = "") =>
     .join("");
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Traduce il ruole tecnico in etichetta italiana. */
+export const roleLabel = (role) => {
+  const map = {
+    admin: "Amministratore",
+    teacher: "Insegnante",
+    student: "Studente",
+  };
+  return map[role] || role;
+};

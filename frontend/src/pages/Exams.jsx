@@ -23,15 +23,30 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import {
+  getNonSchoolReason,
+  isSchoolDay,
+  nextSchoolDay,
+} from "@/lib/schoolCalendar";
+import ClassFilter from "@/components/shared/ClassFilter";
+import {
+  useTeacherSubjects,
+  buildSubjectMap,
+} from "@/hooks/useTeacherSubjects";
 
 export default function Exams() {
   const { user } = useAuth();
   const isTeacher = user?.role === "teacher" || user?.role === "admin";
   const qc = useQueryClient();
+  const [selectedClass, setSelectedClass] = useState("");
 
   const { data: exams = [], isLoading } = useQuery({
-    queryKey: ["exams"],
-    queryFn: async () => (await api.get("/exams")).data.exams || [],
+    queryKey: ["exams", selectedClass],
+    queryFn: async () => {
+      const params = {};
+      if (selectedClass) params.class_id = selectedClass;
+      return (await api.get("/exams", { params })).data.exams || [];
+    },
   });
 
   const remove = useMutation({
@@ -54,8 +69,16 @@ export default function Exams() {
         icon={FileText}
         title="Verifiche scritte"
         subtitle="Verifiche e valutazioni programmate"
-        actions={isTeacher ? <NewExamDialog /> : null}
+        actions={
+          isTeacher ? (
+            <div className="flex items-center gap-2">
+              <SuggestFreeDayDialog />
+              <NewExamDialog />
+            </div>
+          ) : null
+        }
       />
+      <ClassFilter value={selectedClass} onChange={setSelectedClass} />
       {isLoading ? (
         <div className="grid place-items-center py-20">
           <Loader2 className="size-6 animate-spin text-muted-fg" />
@@ -155,6 +178,140 @@ function Group({ title, items, isTeacher, onDelete, dim }) {
   );
 }
 
+function SuggestFreeDayDialog() {
+  const [open, setOpen] = useState(false);
+  const [classId, setClassId] = useState("");
+  const [weekStart, setWeekStart] = useState(
+    format(nextSchoolDay(new Date()), "yyyy-MM-dd"),
+  );
+  const [hint, setHint] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const weekStartReason = getNonSchoolReason(weekStart);
+
+  const { data: classes = [] } = useQuery({
+    queryKey: ["classes"],
+    enabled: open,
+    queryFn: async () => (await api.get("/classes")).data.classes || [],
+  });
+
+  const ask = async () => {
+    if (!classId) return toast.warning("Seleziona prima una classe");
+    setLoading(true);
+    setHint(null);
+    try {
+      const { data } = await api.post("/ai/suggest/exam-day", {
+        class_id: classId,
+        week_start: weekStart,
+      });
+      setHint(data);
+      toast.success("Suggerimento AI pronto");
+    } catch (e) {
+      toast.error(e.response?.data?.error || "AI non disponibile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (v) {
+          setWeekStart(format(nextSchoolDay(new Date()), "yyyy-MM-dd"));
+        }
+        if (!v) {
+          setHint(null);
+          setClassId("");
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button variant="outline">
+          <Sparkles className="size-4" /> Suggerisci giorno libero
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Pianificatore AI · giorno migliore</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-xs text-muted-fg">
+            L’AI analizza il carico della settimana (compiti, verifiche,
+            interrogazioni) e propone il giorno più leggero per programmare
+            una nuova prova.
+          </p>
+          <div className="space-y-1.5">
+            <Label>Classe</Label>
+            <select
+              value={classId}
+              onChange={(e) => setClassId(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-border bg-elevated/40 px-3 text-sm"
+            >
+              <option value="" disabled>
+                Seleziona classe…
+              </option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Inizio settimana</Label>
+            <Input
+              type="date"
+              value={weekStart}
+              onChange={(e) => setWeekStart(e.target.value)}
+              aria-invalid={!!weekStartReason}
+              className={cn(weekStartReason && "border-danger ring-danger/30")}
+            />
+            {weekStartReason && (
+              <p className="text-xs text-danger">⚠ {weekStartReason}</p>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="gradient"
+            className="w-full"
+            onClick={ask}
+            disabled={loading || !!weekStartReason}
+          >
+            {loading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Sparkles className="size-4" />
+            )}
+            {loading ? "Sto analizzando…" : "Chiedi all’AI"}
+          </Button>
+          {hint && (
+            <div className="rounded-lg border border-border/60 bg-elevated/40 p-3 text-sm">
+              <div className="font-semibold text-primary">
+                {hint.best_day
+                  ? format(parseISO(hint.best_day), "EEEE d MMMM yyyy", {
+                      locale: it,
+                    })
+                  : "—"}
+              </div>
+              {hint.reasoning && (
+                <div className="mt-1 text-xs text-muted-fg">
+                  {hint.reasoning}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Chiudi
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function NewExamDialog() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -165,18 +322,28 @@ function NewExamDialog() {
     subject: "",
     description: "",
     scheduled_for: format(
-      new Date(Date.now() + 7 * 86400_000),
+      nextSchoolDay(new Date(Date.now() + 7 * 86400_000)),
       "yyyy-MM-dd'T'HH:mm",
     ),
     duration_min: 60,
     topics: "",
   });
 
+  const dateReason = getNonSchoolReason(form.scheduled_for);
+
   const { data: classes = [] } = useQuery({
     queryKey: ["classes"],
     enabled: open,
     queryFn: async () => (await api.get("/classes")).data.classes || [],
   });
+
+  const { data: teacherSubjects = [] } = useTeacherSubjects();
+  const subjectMap = buildSubjectMap(teacherSubjects);
+
+  const handleClassChange = (classId) => {
+    const subj = subjectMap[classId] || "";
+    setForm((f) => ({ ...f, class_id: classId, subject: subj }));
+  };
 
   const create = useMutation({
     mutationFn: (payload) => api.post("/exams", payload),
@@ -192,7 +359,7 @@ function NewExamDialog() {
   const askAI = async () => {
     if (!form.class_id) return toast.warning("Seleziona prima una classe");
     try {
-      const week = format(new Date(), "yyyy-MM-dd");
+      const week = format(nextSchoolDay(new Date()), "yyyy-MM-dd");
       const { data } = await api.post("/ai/suggest/exam-day", {
         class_id: form.class_id,
         week_start: week,
@@ -206,6 +373,12 @@ function NewExamDialog() {
 
   const submit = (e) => {
     e.preventDefault();
+    if (!isSchoolDay(form.scheduled_for)) {
+      toast.error(
+        `Non puoi programmare verifiche in questo giorno: ${getNonSchoolReason(form.scheduled_for)}`,
+      );
+      return;
+    }
     const payload = {
       ...form,
       topics: form.topics
@@ -233,9 +406,7 @@ function NewExamDialog() {
             <select
               required
               value={form.class_id}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, class_id: e.target.value }))
-              }
+              onChange={(e) => handleClassChange(e.target.value)}
               className="flex h-10 w-full rounded-md border border-border bg-elevated/40 px-3 text-sm"
             >
               <option value="" disabled>
@@ -263,10 +434,20 @@ function NewExamDialog() {
               <Label>Materia</Label>
               <Input
                 value={form.subject}
+                readOnly={!!subjectMap[form.class_id]}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, subject: e.target.value }))
                 }
+                className={cn(
+                  !!subjectMap[form.class_id] &&
+                    "bg-elevated/60 text-muted-fg cursor-not-allowed",
+                )}
               />
+              {!!subjectMap[form.class_id] && (
+                <p className="text-[10px] text-muted-fg">
+                  Materia assegnata per questa classe
+                </p>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -279,7 +460,12 @@ function NewExamDialog() {
                 onChange={(e) =>
                   setForm((f) => ({ ...f, scheduled_for: e.target.value }))
                 }
+                aria-invalid={!!dateReason}
+                className={cn(dateReason && "border-danger ring-danger/30")}
               />
+              {dateReason && (
+                <p className="text-xs text-danger">⚠ {dateReason}</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Durata (min)</Label>
@@ -327,8 +513,7 @@ function NewExamDialog() {
             </div>
             {aiHint && (
               <div className="mt-2 text-xs text-muted-fg">
-                <span className="text-fg font-mono">{aiHint.best_day}</span> ·
-                score {aiHint.score?.toFixed(1)} ·
+                <span className="text-fg font-mono">{aiHint.best_day}</span>
                 <span className="ml-1">{aiHint.reasoning}</span>
               </div>
             )}
@@ -345,7 +530,7 @@ function NewExamDialog() {
             <Button
               type="submit"
               variant="gradient"
-              disabled={create.isPending}
+              disabled={create.isPending || !!dateReason}
             >
               {create.isPending ? (
                 <Loader2 className="size-4 animate-spin" />

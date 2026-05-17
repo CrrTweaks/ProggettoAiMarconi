@@ -23,15 +23,30 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import {
+  getNonSchoolReason,
+  isSchoolDay,
+  nextSchoolDay,
+} from "@/lib/schoolCalendar";
+import ClassFilter from "@/components/shared/ClassFilter";
+import {
+  useTeacherSubjects,
+  buildSubjectMap,
+} from "@/hooks/useTeacherSubjects";
 
 export default function Homework() {
   const { user } = useAuth();
   const isTeacher = user?.role === "teacher" || user?.role === "admin";
   const qc = useQueryClient();
+  const [selectedClass, setSelectedClass] = useState("");
 
   const { data: homework = [], isLoading } = useQuery({
-    queryKey: ["homework"],
-    queryFn: async () => (await api.get("/homework")).data.homework || [],
+    queryKey: ["homework", selectedClass],
+    queryFn: async () => {
+      const params = {};
+      if (selectedClass) params.class_id = selectedClass;
+      return (await api.get("/homework", { params })).data.homework || [];
+    },
   });
 
   const remove = useMutation({
@@ -58,6 +73,8 @@ export default function Homework() {
         subtitle="Compiti da studiare e completare"
         actions={isTeacher ? <NewHomeworkDialog /> : null}
       />
+
+      <ClassFilter value={selectedClass} onChange={setSelectedClass} />
 
       {isLoading ? (
         <div className="grid place-items-center py-20">
@@ -167,15 +184,25 @@ function NewHomeworkDialog() {
     title: "",
     description: "",
     subject: "",
-    due_date: format(new Date(), "yyyy-MM-dd"),
+    due_date: format(nextSchoolDay(new Date()), "yyyy-MM-dd"),
     priority: 1,
   });
+
+  const dueReason = getNonSchoolReason(form.due_date);
 
   const { data: classes = [] } = useQuery({
     queryKey: ["classes"],
     queryFn: async () => (await api.get("/classes")).data.classes || [],
     enabled: open,
   });
+
+  const { data: teacherSubjects = [] } = useTeacherSubjects();
+  const subjectMap = buildSubjectMap(teacherSubjects);
+
+  const handleClassChange = (classId) => {
+    const subj = subjectMap[classId] || "";
+    setForm((f) => ({ ...f, class_id: classId, subject: subj }));
+  };
 
   const create = useMutation({
     mutationFn: (payload) => api.post("/homework", payload),
@@ -189,7 +216,7 @@ function NewHomeworkDialog() {
         title: "",
         description: "",
         subject: "",
-        due_date: format(new Date(), "yyyy-MM-dd"),
+        due_date: format(nextSchoolDay(new Date()), "yyyy-MM-dd"),
         priority: 1,
       });
     },
@@ -211,6 +238,12 @@ function NewHomeworkDialog() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            if (!isSchoolDay(form.due_date)) {
+              toast.error(
+                `Non puoi assegnare compiti in questo giorno: ${getNonSchoolReason(form.due_date)}`,
+              );
+              return;
+            }
             create.mutate(form);
           }}
           className="space-y-3"
@@ -220,9 +253,7 @@ function NewHomeworkDialog() {
             <select
               required
               value={form.class_id}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, class_id: e.target.value }))
-              }
+              onChange={(e) => handleClassChange(e.target.value)}
               className="flex h-10 w-full rounded-md border border-border bg-elevated/40 px-3 text-sm outline-none focus:ring-2 focus:ring-ring/60"
             >
               <option value="" disabled>
@@ -250,11 +281,21 @@ function NewHomeworkDialog() {
               <Label>Materia</Label>
               <Input
                 value={form.subject}
+                readOnly={!!subjectMap[form.class_id]}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, subject: e.target.value }))
                 }
                 placeholder="Matematica"
+                className={cn(
+                  !!subjectMap[form.class_id] &&
+                    "bg-elevated/60 text-muted-fg cursor-not-allowed",
+                )}
               />
+              {!!subjectMap[form.class_id] && (
+                <p className="text-[10px] text-muted-fg">
+                  Materia assegnata per questa classe
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Data di scadenza</Label>
@@ -265,7 +306,12 @@ function NewHomeworkDialog() {
                 onChange={(e) =>
                   setForm((f) => ({ ...f, due_date: e.target.value }))
                 }
+                aria-invalid={!!dueReason}
+                className={cn(dueReason && "border-danger ring-danger/30")}
               />
+              {dueReason && (
+                <p className="text-xs text-danger">⚠ {dueReason}</p>
+              )}
             </div>
           </div>
           <div className="space-y-1.5">
@@ -309,7 +355,7 @@ function NewHomeworkDialog() {
             <Button
               type="submit"
               variant="gradient"
-              disabled={create.isPending}
+              disabled={create.isPending || !!dueReason}
             >
               {create.isPending ? (
                 <Loader2 className="size-4 animate-spin" />

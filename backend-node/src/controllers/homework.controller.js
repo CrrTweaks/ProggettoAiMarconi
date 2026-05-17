@@ -2,9 +2,13 @@
 import { query } from "../config/db.js";
 import { HttpError, asyncHandler } from "../middleware/error.js";
 import { emitToUser } from "../services/socket.js";
+import {
+  assertClassMembership,
+  assertResourceClassMembership,
+} from "../services/permissions.js";
 
 export const list = asyncHandler(async (req, res) => {
-  const { class_id, from, to } = req.query;
+  const { class_id, subject, from, to } = req.query;
   const params = [req.user.id];
   let where = `h.deleted_at IS NULL
     AND h.class_id IN (
@@ -16,6 +20,10 @@ export const list = asyncHandler(async (req, res) => {
     params.push(class_id);
     where += ` AND h.class_id=$${params.length}`;
   }
+  if (subject) {
+    params.push(subject);
+    where += ` AND h.subject = $${params.length}`;
+  }
   if (from) {
     params.push(from);
     where += ` AND h.due_date >= $${params.length}`;
@@ -23,6 +31,18 @@ export const list = asyncHandler(async (req, res) => {
   if (to) {
     params.push(to);
     where += ` AND h.due_date <= $${params.length}`;
+  }
+
+  // Teacher senza filtro subject: mostra solo le sue materie
+  if (req.user.role === "teacher" && !subject) {
+    const { rows: subjRows } = await query(
+      `SELECT DISTINCT subject FROM schedules WHERE teacher_id=$1`,
+      [req.user.id],
+    );
+    if (subjRows.length > 0) {
+      params.push(subjRows.map((r) => r.subject));
+      where += ` AND h.subject = ANY($${params.length})`;
+    }
   }
 
   const { rows } = await query(
@@ -38,6 +58,21 @@ export const list = asyncHandler(async (req, res) => {
 export const create = asyncHandler(async (req, res) => {
   const { class_id, title, description, subject, due_date, priority } =
     req.body;
+  await assertClassMembership(req.user, class_id);
+
+  // Teacher: verifica che insegna questa materia nella classe scelta
+  if (req.user.role === "teacher" && subject) {
+    const { rows: subjCheck } = await query(
+      `SELECT 1 FROM schedules
+       WHERE teacher_id=$1 AND class_id=$2 AND subject=$3
+       LIMIT 1`,
+      [req.user.id, class_id, subject],
+    );
+    if (!subjCheck[0]) {
+      throw new HttpError(403, "Non sei assegnato a insegnare questa materia nella classe selezionata");
+    }
+  }
+
   const { rows } = await query(
     `INSERT INTO homework (class_id, title, description, subject, due_date, priority, assigned_by)
      VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
@@ -76,6 +111,23 @@ export const create = asyncHandler(async (req, res) => {
 
 export const update = asyncHandler(async (req, res) => {
   const { title, description, subject, due_date, priority } = req.body;
+  await assertResourceClassMembership(req.user, "homework", req.params.id);
+
+  if (req.user.role === "teacher" && subject) {
+    const { rows: r } = await query(
+      `SELECT class_id FROM homework WHERE id=$1`, [req.params.id],
+    );
+    const { rows: subjCheck } = await query(
+      `SELECT 1 FROM schedules
+       WHERE teacher_id=$1 AND class_id=$2 AND subject=$3
+       LIMIT 1`,
+      [req.user.id, r[0].class_id, subject],
+    );
+    if (!subjCheck[0]) {
+      throw new HttpError(403, "Non sei assegnato a insegnare questa materia nella classe selezionata");
+    }
+  }
+
   const { rows } = await query(
     `UPDATE homework SET
        title       = COALESCE($1, title),
@@ -92,6 +144,7 @@ export const update = asyncHandler(async (req, res) => {
 });
 
 export const remove = asyncHandler(async (req, res) => {
+  await assertResourceClassMembership(req.user, "homework", req.params.id);
   await query("UPDATE homework SET deleted_at=NOW() WHERE id=$1", [
     req.params.id,
   ]);

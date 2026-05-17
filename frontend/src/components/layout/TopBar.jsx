@@ -7,7 +7,7 @@ import { useAuth } from "@/store/auth";
 import { useUI } from "@/store/ui";
 import { api } from "@/lib/api";
 import { getSocket } from "@/lib/socket";
-import { initials, formatTime } from "@/lib/utils";
+import { initials, formatTime, roleLabel } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -193,8 +193,8 @@ export default function TopBar() {
             <span className="text-[11px] text-muted-fg normal-case tracking-normal">
               {user?.email}
             </span>
-            <Badge variant="secondary" className="mt-1 w-fit capitalize">
-              {user?.role}
+            <Badge variant="secondary" className="mt-1 w-fit">
+              {roleLabel(user?.role)}
             </Badge>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />

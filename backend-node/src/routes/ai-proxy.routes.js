@@ -5,6 +5,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler, HttpError } from "../middleware/error.js";
 import { aiClient } from "../services/ai-proxy.js";
 import { query } from "../config/db.js";
+import { isSchoolDay } from "../lib/schoolCalendar.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -228,13 +229,15 @@ router.post(
   "/suggest/exam-day",
   asyncHandler(async (req, res) => {
     const { class_id, week_start } = req.body;
-    // Usa il massimo tra week start e oggi, poi genera i prossimi 7 giorni
-    // per non suggerire mai una data passata
-    const { rows: days } = await query(
+    if (!isSchoolDay(week_start)) {
+      throw new HttpError(400, "La data di inizio settimana non è un giorno scolastico");
+    }
+    // Genera 14 giorni e filtra solo quelli scolastici (esclude weekend e festività)
+    const { rows: rawDays } = await query(
       `WITH base AS (
          SELECT GREATEST($2::date, CURRENT_DATE) AS start_date
        ),
-       days AS (SELECT generate_series(0,6) AS d)
+       days AS (SELECT generate_series(0,13) AS d)
        SELECT (b.start_date + d) AS day,
               (SELECT COUNT(*) FROM homework h
                  WHERE h.class_id=$1 AND h.due_date = b.start_date + d AND h.deleted_at IS NULL) AS homework,
@@ -246,6 +249,12 @@ router.post(
        ORDER BY day`,
       [class_id, week_start],
     );
+    const days = rawDays
+      .filter((d) => isSchoolDay(d.day))
+      .slice(0, 7);
+    if (days.length === 0) {
+      throw new HttpError(400, "Nessun giorno scolastico disponibile nel periodo selezionato");
+    }
     const { data } = await aiClient.post("/suggest/exam-day", {
       workload: days,
     });

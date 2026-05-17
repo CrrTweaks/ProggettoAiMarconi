@@ -1,6 +1,10 @@
 // Controller lezioni
 import { query } from "../config/db.js";
 import { HttpError, asyncHandler } from "../middleware/error.js";
+import {
+  assertClassMembership,
+  assertResourceClassMembership,
+} from "../services/permissions.js";
 
 export const list = asyncHandler(async (req, res) => {
   const { class_id, from, to } = req.query;
@@ -36,6 +40,7 @@ export const list = asyncHandler(async (req, res) => {
 
 export const create = asyncHandler(async (req, res) => {
   const { class_id, title, topic, notes, taught_on, duration_min } = req.body;
+  await assertClassMembership(req.user, class_id);
   const { rows } = await query(
     `INSERT INTO lessons (class_id, teacher_id, title, topic, notes, taught_on, duration_min)
      VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
@@ -54,6 +59,7 @@ export const create = asyncHandler(async (req, res) => {
 
 export const update = asyncHandler(async (req, res) => {
   const { title, topic, notes, taught_on, duration_min } = req.body;
+  await assertResourceClassMembership(req.user, "lessons", req.params.id);
   const { rows } = await query(
     `UPDATE lessons SET
        title        = COALESCE($1, title),
@@ -70,6 +76,7 @@ export const update = asyncHandler(async (req, res) => {
 });
 
 export const remove = asyncHandler(async (req, res) => {
+  await assertResourceClassMembership(req.user, "lessons", req.params.id);
   await query("DELETE FROM lessons WHERE id=$1", [req.params.id]);
   res.json({ ok: true });
 });

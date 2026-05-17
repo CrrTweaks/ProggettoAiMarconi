@@ -52,3 +52,15 @@ export const removeMe = asyncHandler(async (req, res) => {
   await query("UPDATE users SET deleted_at=NOW() WHERE id=$1", [req.user.id]);
   res.json({ ok: true });
 });
+
+export const mySubjects = asyncHandler(async (req, res) => {
+  const { rows } = await query(
+    `SELECT DISTINCT s.class_id, c.name AS class_name, s.subject
+     FROM schedules s
+     JOIN classes c ON c.id = s.class_id
+     WHERE s.teacher_id = $1
+     ORDER BY c.name, s.subject`,
+    [req.user.id],
+  );
+  res.json({ subjects: rows });
+});

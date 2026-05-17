@@ -187,7 +187,7 @@ export default function RagPdf() {
                     </div>
                   </div>
                   <Badge variant={d.status === "ready" ? "success" : "warning"}>
-                    {d.status}
+                    {d.status === "ready" ? "Pronto" : d.status === "processing" ? "In elaborazione" : d.status}
                   </Badge>
                   <Button
                     variant="ghost"

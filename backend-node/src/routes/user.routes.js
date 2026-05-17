@@ -28,6 +28,7 @@ router.put(
   ctl.updateMe,
 );
 router.delete("/me", ctl.removeMe);
+router.get("/me/subjects", ctl.mySubjects);
 router.get("/:id", requireRole("admin", "teacher"), ctl.getById);
 
 export default router;

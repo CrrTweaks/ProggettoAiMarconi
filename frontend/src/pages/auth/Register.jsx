@@ -22,6 +22,7 @@ export default function Register() {
     email: "",
     password: "",
     role: "student",
+    primary_subject: "",
   });
 
   const upd = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -86,7 +87,14 @@ export default function Register() {
               <button
                 key={r.value}
                 type="button"
-                onClick={() => setForm((f) => ({ ...f, role: r.value }))}
+                onClick={() =>
+                  setForm((f) => ({
+                    ...f,
+                    role: r.value,
+                    primary_subject:
+                      r.value === "student" ? "" : f.primary_subject,
+                  }))
+                }
                 className={
                   "rounded-md border px-4 py-2 text-sm font-medium transition-colors " +
                   (form.role === r.value
@@ -99,6 +107,18 @@ export default function Register() {
             ))}
           </div>
         </div>
+        {form.role === "teacher" && (
+          <div className="space-y-2">
+            <Label htmlFor="subject">Materia principale</Label>
+            <Input
+              id="subject"
+              required
+              value={form.primary_subject}
+              onChange={upd("primary_subject")}
+              placeholder="Es. Matematica, Italiano, Storia…"
+            />
+          </div>
+        )}
 
         <Button
           type="submit"

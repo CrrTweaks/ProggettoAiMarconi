@@ -15,11 +15,11 @@ const ACCOUNTS = [
   { email: "admin@school.test",    password: "Admin123!", full_name: "Admin School",     role: "admin"   },
 
   // Teachers
-  { email: "rossi@school.test",    password: TEACHER_PWD, full_name: "Maria Rossi",      role: "teacher" },
-  { email: "verdi@school.test",    password: TEACHER_PWD, full_name: "Giovanni Verdi",   role: "teacher" },
-  { email: "bianchi@school.test",  password: TEACHER_PWD, full_name: "Anna Bianchi",     role: "teacher" },
-  { email: "ferrari@school.test",  password: TEACHER_PWD, full_name: "Paolo Ferrari",    role: "teacher" },
-  { email: "esposito@school.test", password: TEACHER_PWD, full_name: "Lucia Esposito",   role: "teacher" },
+  { email: "rossi@school.test",    password: TEACHER_PWD, full_name: "Maria Rossi",      role: "teacher", primary_subject: "Matematica" },
+  { email: "verdi@school.test",    password: TEACHER_PWD, full_name: "Giovanni Verdi",   role: "teacher", primary_subject: "Italiano" },
+  { email: "bianchi@school.test",  password: TEACHER_PWD, full_name: "Anna Bianchi",     role: "teacher", primary_subject: "Fisica" },
+  { email: "ferrari@school.test",  password: TEACHER_PWD, full_name: "Paolo Ferrari",    role: "teacher", primary_subject: "Storia" },
+  { email: "esposito@school.test", password: TEACHER_PWD, full_name: "Lucia Esposito",   role: "teacher", primary_subject: "Inglese" },
 
   // Students 3A
   { email: "conti@school.test",    password: STUDENT_PWD, full_name: "Luca Conti",       role: "student" },
@@ -48,14 +48,15 @@ const ACCOUNTS = [
   for (const acc of ACCOUNTS) {
     const hash = await hashPassword(acc.password);
     const r = await query(
-      `INSERT INTO users (email, password_hash, full_name, role)
-       VALUES ($1,$2,$3,$4)
+      `INSERT INTO users (email, password_hash, full_name, role, primary_subject)
+       VALUES ($1,$2,$3,$4,$5)
        ON CONFLICT (email) DO UPDATE
-         SET password_hash = EXCLUDED.password_hash,
-             full_name     = EXCLUDED.full_name,
-             role          = EXCLUDED.role
+         SET password_hash     = EXCLUDED.password_hash,
+             full_name         = EXCLUDED.full_name,
+             role              = EXCLUDED.role,
+             primary_subject   = EXCLUDED.primary_subject
        RETURNING id, email, role`,
-      [acc.email, hash, acc.full_name, acc.role],
+      [acc.email, hash, acc.full_name, acc.role, acc.primary_subject || null],
     );
     console.log(`  ✓ ${r.rows[0].email}  (${r.rows[0].role})`);
   }

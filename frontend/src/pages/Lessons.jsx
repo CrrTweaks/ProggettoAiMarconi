@@ -22,15 +22,27 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import {
+  getNonSchoolReason,
+  isSchoolDay,
+  nextSchoolDay,
+} from "@/lib/schoolCalendar";
+import ClassFilter from "@/components/shared/ClassFilter";
 
 export default function Lessons() {
   const { user } = useAuth();
   const isTeacher = user?.role === "teacher" || user?.role === "admin";
   const qc = useQueryClient();
+  const [selectedClass, setSelectedClass] = useState("");
 
   const { data: lessons = [], isLoading } = useQuery({
-    queryKey: ["lessons"],
-    queryFn: async () => (await api.get("/lessons")).data.lessons || [],
+    queryKey: ["lessons", selectedClass],
+    queryFn: async () => {
+      const params = {};
+      if (selectedClass) params.class_id = selectedClass;
+      return (await api.get("/lessons", { params })).data.lessons || [];
+    },
   });
 
   const remove = useMutation({
@@ -49,6 +61,8 @@ export default function Lessons() {
         subtitle="Argomenti trattati in classe · registro elettronico"
         actions={isTeacher ? <NewLessonDialog /> : null}
       />
+
+      <ClassFilter value={selectedClass} onChange={setSelectedClass} />
 
       {isLoading ? (
         <div className="grid place-items-center py-20">
@@ -118,9 +132,11 @@ function NewLessonDialog() {
     title: "",
     topic: "",
     notes: "",
-    taught_on: format(new Date(), "yyyy-MM-dd"),
+    taught_on: format(nextSchoolDay(new Date()), "yyyy-MM-dd"),
     duration_min: 60,
   });
+
+  const dateReason = getNonSchoolReason(form.taught_on);
 
   const { data: classes = [] } = useQuery({
     queryKey: ["classes"],
@@ -140,7 +156,7 @@ function NewLessonDialog() {
         title: "",
         topic: "",
         notes: "",
-        taught_on: format(new Date(), "yyyy-MM-dd"),
+        taught_on: format(nextSchoolDay(new Date()), "yyyy-MM-dd"),
         duration_min: 60,
       });
     },
@@ -161,6 +177,12 @@ function NewLessonDialog() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            if (!isSchoolDay(form.taught_on)) {
+              toast.error(
+                `Non puoi registrare lezioni in questo giorno: ${getNonSchoolReason(form.taught_on)}`,
+              );
+              return;
+            }
             create.mutate(form);
           }}
           className="space-y-3"
@@ -224,7 +246,12 @@ function NewLessonDialog() {
                 onChange={(e) =>
                   setForm((f) => ({ ...f, taught_on: e.target.value }))
                 }
+                aria-invalid={!!dateReason}
+                className={cn(dateReason && "border-danger ring-danger/30")}
               />
+              {dateReason && (
+                <p className="text-xs text-danger">⚠ {dateReason}</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Durata (min)</Label>
@@ -250,7 +277,7 @@ function NewLessonDialog() {
             <Button
               type="submit"
               variant="gradient"
-              disabled={create.isPending}
+              disabled={create.isPending || !!dateReason}
             >
               {create.isPending ? (
                 <Loader2 className="size-4 animate-spin" />

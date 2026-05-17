@@ -12,6 +12,10 @@ import {
   UserPlus,
   Search,
   X,
+  ClipboardList,
+  FileText,
+  Eye,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,7 +35,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { initials } from "@/lib/utils";
+import { initials, roleLabel } from "@/lib/utils";
 
 const COLORS = [
   "#3b82f6",
@@ -44,11 +48,25 @@ const COLORS = [
 ];
 
 export default function Classes() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const isTeacher = user?.role === "teacher";
   const qc = useQueryClient();
   const { data: classes = [], isLoading } = useQuery({
     queryKey: ["classes"],
     queryFn: async () => (await api.get("/classes")).data.classes || [],
   });
+
+  const { data: mySubjects = [] } = useQuery({
+    queryKey: ["me", "subjects"],
+    queryFn: async () => (await api.get("/users/me/subjects")).data.subjects || [],
+    enabled: isTeacher,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const subjectMap = Object.fromEntries(
+    mySubjects.map((s) => [s.class_id, s.subject]),
+  );
 
   const remove = useMutation({
     mutationFn: (id) => api.delete(`/classes/${id}`),
@@ -63,8 +81,12 @@ export default function Classes() {
       <PageHeader
         icon={Users}
         title="Classi"
-        subtitle="Gestisci le tue classi scolastiche e i membri"
-        actions={<NewClassDialog />}
+        subtitle={
+          isAdmin
+            ? "Gestisci le classi scolastiche e i membri"
+            : "Le tue classi assegnate · panoramica"
+        }
+        actions={isAdmin ? <NewClassDialog /> : null}
       />
 
       {isLoading ? (
@@ -75,7 +97,11 @@ export default function Classes() {
         <EmptyState
           icon={Users}
           title="Nessuna classe"
-          description="Crea la tua prima classe per iniziare."
+          description={
+            isAdmin
+              ? "Crea la tua prima classe per iniziare."
+              : "Non sei ancora assegnato a nessuna classe. Contatta l'amministratore per essere aggiunto."
+          }
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -84,6 +110,7 @@ export default function Classes() {
               key={c.id}
               cls={c}
               idx={i}
+              mySubject={subjectMap[c.id]}
               onDelete={() => remove.mutate(c.id)}
             />
           ))}
@@ -93,9 +120,10 @@ export default function Classes() {
   );
 }
 
-function ClassCard({ cls, idx, onDelete }) {
+function ClassCard({ cls, idx, mySubject, onDelete }) {
   const { user } = useAuth();
-  const isTeacher = user?.role === "teacher" || user?.role === "admin";
+  const isAdmin = user?.role === "admin";
+  const isTeacher = user?.role === "teacher";
   const { data: detail } = useQuery({
     queryKey: ["class-detail", cls.id],
     queryFn: async () => (await api.get(`/classes/${cls.id}`)).data,
@@ -128,16 +156,25 @@ function ClassCard({ cls, idx, onDelete }) {
                 {cls.subject}
               </Badge>
             )}
-          </div>
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            {isTeacher && (
-              <MembersDialog
-                classId={cls.id}
-                className={cls.name}
-                members={detail?.members || []}
-              />
+            {isTeacher && mySubject && (
+              <Badge variant="outline" className="mt-1.5 text-[10px] border-primary/30 text-primary">
+                Insegna: {mySubject}
+              </Badge>
             )}
-            {isTeacher && (
+          </div>
+          <div className="flex items-center gap-1">
+            <MembersDialog
+              classId={cls.id}
+              className={cls.name}
+              members={detail?.members || []}
+              readOnly={!isAdmin}
+            />
+            <ScheduleDialog
+              classId={cls.id}
+              className={cls.name}
+              readOnly={!isAdmin}
+            />
+            {isAdmin && (
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -158,7 +195,7 @@ function ClassCard({ cls, idx, onDelete }) {
 
         {detail && (
           <>
-            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+            <div className="mt-4 grid grid-cols-4 gap-2 text-center">
               <Stat
                 icon={Users}
                 value={detail.members?.length || 0}
@@ -169,8 +206,49 @@ function ClassCard({ cls, idx, onDelete }) {
                 value={detail.schedule?.length || 0}
                 label="slot"
               />
-              <Stat icon={BookOpen} value="—" label="lezioni" />
+              <Stat
+                icon={ClipboardList}
+                value={detail.counts?.homework_count ?? "—"}
+                label="compiti"
+              />
+              <Stat
+                icon={FileText}
+                value={detail.counts?.exams_count ?? "—"}
+                label="verifiche"
+              />
             </div>
+
+            {/* Scorciatoie rapide per docenti e admin */}
+            {detail.counts && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <QuickLink
+                  icon={ClipboardList}
+                  label="Compiti"
+                  count={detail.counts.homework_count}
+                  href={`/homework?class_id=${cls.id}`}
+                />
+                <QuickLink
+                  icon={BookOpen}
+                  label="Lezioni"
+                  count={detail.counts.lessons_count}
+                  href={`/lessons?class_id=${cls.id}`}
+                />
+                <QuickLink
+                  icon={FileText}
+                  label="Verifiche"
+                  count={detail.counts.exams_count}
+                  href={`/exams?class_id=${cls.id}`}
+                />
+                <QuickLink
+                  icon={GraduationCap}
+                  label="Interrogazioni"
+                  count={detail.counts.interrogations_count}
+                  href={`/interrogations?class_id=${cls.id}`}
+                />
+              </div>
+            )}
+
+            {/* Membri sempre visibili */}
             <div className="mt-4 flex -space-x-2">
               {(detail.members || []).slice(0, 6).map((m) => (
                 <div
@@ -194,7 +272,7 @@ function ClassCard({ cls, idx, onDelete }) {
   );
 }
 
-function MembersDialog({ classId, className, members }) {
+function MembersDialog({ classId, className, members, readOnly }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -244,29 +322,32 @@ function MembersDialog({ classId, className, members }) {
           variant="ghost"
           size="icon-sm"
           className="text-muted-fg hover:text-primary"
-          title="Gestisci membri"
+          title={readOnly ? "Visualizza membri" : "Gestisci membri"}
         >
-          <UserPlus className="size-4" />
+          {readOnly ? <Eye className="size-4" /> : <UserPlus className="size-4" />}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Gestisci membri · {className}</DialogTitle>
+          <DialogTitle>
+            {readOnly ? "Membri della classe" : `Gestisci membri · ${className}`}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Cerca uno studente</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-fg" />
-              <Input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Nome o email (min 2 caratteri)"
-                className="pl-9"
-              />
-            </div>
-            {q.trim().length >= 2 && (
-              <div className="max-h-48 overflow-y-auto rounded-md border border-border/40 bg-elevated/40">
+          {!readOnly && (
+            <div className="space-y-2">
+              <Label>Cerca uno studente</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-fg" />
+                <Input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Nome o email (min 2 caratteri)"
+                  className="pl-9"
+                />
+              </div>
+              {q.trim().length >= 2 && (
+                <div className="max-h-48 overflow-y-auto rounded-md border border-border/40 bg-elevated/40">
                 {isFetching ? (
                   <div className="grid place-items-center p-4">
                     <Loader2 className="size-4 animate-spin text-muted-fg" />
@@ -295,12 +376,15 @@ function MembersDialog({ classId, className, members }) {
               </div>
             )}
           </div>
+          )}
 
           <div className="space-y-2">
             <Label>Membri attuali ({members.length})</Label>
             {members.length === 0 ? (
               <div className="rounded-md border border-border/40 bg-elevated/40 p-3 text-sm text-muted-fg">
-                Nessun membro. Aggiungine uno dalla ricerca qui sopra.
+                {readOnly
+                  ? "Nessun membro in questa classe."
+                  : "Nessun membro. Aggiungine uno dalla ricerca qui sopra."}
               </div>
             ) : (
               <div className="max-h-48 overflow-y-auto rounded-md border border-border/40 divide-y divide-border/40">
@@ -314,19 +398,21 @@ function MembersDialog({ classId, className, members }) {
                         {m.full_name}
                       </div>
                       <div className="text-xs text-muted-fg truncate">
-                        {m.email} · {m.role}
+                        {m.email} · {roleLabel(m.role)}
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-muted-fg hover:text-danger"
-                      onClick={() => remove.mutate(m.id)}
-                      disabled={remove.isPending}
-                      title="Rimuovi"
-                    >
-                      <X className="size-4" />
-                    </Button>
+                    {!readOnly && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-muted-fg hover:text-danger"
+                        onClick={() => remove.mutate(m.id)}
+                        disabled={remove.isPending}
+                        title="Rimuovi"
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -340,6 +426,194 @@ function MembersDialog({ classId, className, members }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+const WEEKDAYS = [
+  "Lunedì",
+  "Martedì",
+  "Mercoledì",
+  "Giovedì",
+  "Venerdì",
+  "Sabato",
+  "Domenica",
+];
+
+function ScheduleDialog({ classId, className, readOnly }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    weekday: "0",
+    start_time: "08:00",
+    end_time: "09:00",
+    subject: "",
+    room: "",
+    teacher_id: "",
+  });
+
+  const { data: schedules = [] } = useQuery({
+    queryKey: ["schedules", classId],
+    queryFn: async () => (await api.get(`/schedules/class/${classId}`)).data.schedules || [],
+    enabled: open,
+  });
+
+  const { data: teachers = [] } = useQuery({
+    queryKey: ["teachers-list"],
+    queryFn: async () => (await api.get("/users", { params: { role: "teacher" } })).data.users || [],
+    enabled: open && !readOnly,
+  });
+
+  const add = useMutation({
+    mutationFn: (payload) => api.post("/schedules", payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["schedules", classId] });
+      qc.invalidateQueries({ queryKey: ["class-detail", classId] });
+      toast.success("Slot aggiunto");
+      setForm({
+        weekday: "0",
+        start_time: "08:00",
+        end_time: "09:00",
+        subject: "",
+        room: "",
+        teacher_id: "",
+      });
+    },
+    onError: (e) => toast.error(e.response?.data?.error || "Impossibile aggiungere"),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id) => api.delete(`/schedules/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["schedules", classId] });
+      qc.invalidateQueries({ queryKey: ["class-detail", classId] });
+      toast.success("Slot rimosso");
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="text-muted-fg hover:text-primary"
+          title="Orario"
+        >
+          <Clock className="size-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Orario · {className}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          {schedules.length === 0 ? (
+            <div className="rounded-md border border-border/40 bg-elevated/40 p-3 text-sm text-muted-fg">
+              Nessuno slot orario configurato.
+            </div>
+          ) : (
+            <div className="max-h-48 overflow-y-auto rounded-md border border-border/40 divide-y divide-border/40">
+              {schedules.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between gap-2 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">
+                      {s.subject}
+                    </div>
+                    <div className="text-xs text-muted-fg truncate">
+                      {s.teacher_name || "Nessun docente assegnato"}
+                      {s.room && ` · Aula ${s.room}`}
+                      {(s.start_time && s.start_time !== "00:00:00" && s.start_time !== "00:00") && ` · ${s.start_time?.slice(0, 5)}–${s.end_time?.slice(0, 5)}`}
+                    </div>
+                  </div>
+                  {!readOnly && (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-muted-fg hover:text-danger"
+                      onClick={() => remove.mutate(s.id)}
+                      disabled={remove.isPending}
+                      title="Rimuovi"
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!readOnly && (
+            <div className="space-y-2 rounded-lg border border-border/60 bg-elevated/30 p-3">
+              <div className="text-sm font-medium">Nuova assegnazione</div>
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Materia</Label>
+                  <Input
+                    value={form.subject}
+                    onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
+                    placeholder="Matematica"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Docente</Label>
+                  <select
+                    value={form.teacher_id}
+                    onChange={(e) => setForm((f) => ({ ...f, teacher_id: e.target.value }))}
+                    className="flex h-9 w-full rounded-md border border-border bg-elevated/40 px-2 text-sm"
+                  >
+                    <option value="">— Nessun docente —</option>
+                    {teachers.map((t) => (
+                      <option key={t.id} value={t.id}>{t.full_name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={!form.subject || add.isPending}
+                onClick={() =>
+                  add.mutate({
+                    class_id: classId,
+                    subject: form.subject,
+                    teacher_id: form.teacher_id || undefined,
+                  })
+                }
+              >
+                {add.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Plus className="size-4" />
+                )}
+                Assegna docente
+              </Button>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Chiudi
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function QuickLink({ icon: Icon, label, count, href }) {
+  return (
+    <a
+      href={href}
+      className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-elevated/40 px-2.5 py-1 text-[11px] text-muted-fg transition hover:bg-elevated/70 hover:text-fg"
+    >
+      <Icon className="size-3" />
+      <span>{label}</span>
+      <span className="font-bold text-fg">{count ?? 0}</span>
+    </a>
   );
 }
 

@@ -9,13 +9,21 @@ export const list = asyncHandler(async (req, res) => {
         `SELECT c.* FROM classes c
          WHERE c.deleted_at IS NULL ORDER BY c.created_at DESC`,
       )
-    : await query(
-        `SELECT c.* FROM classes c
-         LEFT JOIN class_members m ON m.class_id = c.id AND m.user_id = $1
-         WHERE c.deleted_at IS NULL AND (c.owner_id = $1 OR m.user_id IS NOT NULL)
-         ORDER BY c.created_at DESC`,
-        [req.user.id],
-      );
+    : req.user.role === "teacher"
+      ? await query(
+          `SELECT DISTINCT c.* FROM classes c
+           JOIN schedules s ON s.class_id = c.id
+           WHERE c.deleted_at IS NULL AND s.teacher_id = $1
+           ORDER BY c.created_at DESC`,
+          [req.user.id],
+        )
+      : await query(
+          `SELECT c.* FROM classes c
+           LEFT JOIN class_members m ON m.class_id = c.id AND m.user_id = $1
+           WHERE c.deleted_at IS NULL AND (c.owner_id = $1 OR m.user_id IS NOT NULL)
+           ORDER BY c.created_at DESC`,
+          [req.user.id],
+        );
   res.json({ classes: rows });
 });
 
@@ -36,7 +44,23 @@ export const getById = asyncHandler(async (req, res) => {
     `SELECT * FROM schedules WHERE class_id=$1 ORDER BY weekday, start_time`,
     [req.params.id],
   );
-  res.json({ class: rows[0], members, schedule });
+
+  // Contatori risorse collegate
+  const { rows: counts } = await query(
+    `SELECT
+       (SELECT COUNT(*) FROM homework WHERE class_id=$1 AND deleted_at IS NULL) AS homework_count,
+       (SELECT COUNT(*) FROM lessons WHERE class_id=$1) AS lessons_count,
+       (SELECT COUNT(*) FROM exams WHERE class_id=$1) AS exams_count,
+       (SELECT COUNT(*) FROM interrogations WHERE class_id=$1) AS interrogations_count`,
+    [req.params.id],
+  );
+
+  res.json({
+    class: rows[0],
+    members,
+    schedule,
+    counts: counts[0],
+  });
 });
 
 export const create = asyncHandler(async (req, res) => {

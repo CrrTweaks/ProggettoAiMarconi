@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { initials } from "@/lib/utils";
+import { initials, roleLabel } from "@/lib/utils";
 
 export default function Settings() {
   const { user, refreshMe } = useAuth();
@@ -72,8 +72,8 @@ export default function Settings() {
                   {form.full_name || "—"}
                 </div>
                 <div className="text-sm text-muted-fg">{user?.email}</div>
-                <Badge variant="secondary" className="mt-1 capitalize">
-                  {user?.role}
+                <Badge variant="secondary" className="mt-1">
+                  {roleLabel(user?.role)}
                 </Badge>
               </div>
             </div>

@@ -21,6 +21,7 @@ import absenceRoutes from "./routes/absence.routes.js";
 import examRoutes from "./routes/exam.routes.js";
 import interrogationRoutes from "./routes/interrogation.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import scheduleRoutes from "./routes/schedule.routes.js";
 import aiProxyRoutes from "./routes/ai-proxy.routes.js";
 
 export const app = express();
@@ -85,6 +86,7 @@ app.use("/absences", absenceRoutes);
 app.use("/exams", examRoutes);
 app.use("/interrogations", interrogationRoutes);
 app.use("/notifications", notificationRoutes);
+app.use("/schedules", scheduleRoutes);
 app.use("/ai", aiProxyRoutes);
 
 // 404 e gestore errori globale

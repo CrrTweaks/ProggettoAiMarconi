@@ -18,17 +18,17 @@ const cookieOpts = {
 };
 
 export const register = asyncHandler(async (req, res) => {
-  const { email, password, full_name, role = "student" } = req.body;
+  const { email, password, full_name, role = "student", primary_subject } = req.body;
 
   const exists = await query("SELECT 1 FROM users WHERE email=$1", [email]);
   if (exists.rowCount) throw new HttpError(409, "Email già registrata");
 
   const password_hash = await hashPassword(password);
   const { rows } = await query(
-    `INSERT INTO users (email, password_hash, full_name, role)
-     VALUES ($1,$2,$3,$4)
-     RETURNING id, email, full_name, role, avatar_url, created_at`,
-    [email, password_hash, full_name, role],
+    `INSERT INTO users (email, password_hash, full_name, role, primary_subject)
+     VALUES ($1,$2,$3,$4,$5)
+     RETURNING id, email, full_name, role, primary_subject, avatar_url, created_at`,
+    [email, password_hash, full_name, role, role === "teacher" ? primary_subject || null : null],
   );
 
   const user = rows[0];
@@ -42,7 +42,7 @@ export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   const { rows } = await query(
-    `SELECT id, email, password_hash, full_name, role, avatar_url, is_active
+    `SELECT id, email, password_hash, full_name, role, primary_subject, avatar_url, is_active
      FROM users WHERE email=$1 AND deleted_at IS NULL`,
     [email],
   );
@@ -60,6 +60,7 @@ export const login = asyncHandler(async (req, res) => {
     email: user.email,
     full_name: user.full_name,
     role: user.role,
+    primary_subject: user.primary_subject,
     avatar_url: user.avatar_url,
   };
   const access = signAccessToken(safe);
@@ -80,7 +81,7 @@ export const refresh = asyncHandler(async (req, res) => {
   }
 
   const { rows } = await query(
-    `SELECT id, email, full_name, role, avatar_url
+    `SELECT id, email, full_name, role, primary_subject, avatar_url
      FROM users WHERE id=$1 AND deleted_at IS NULL`,
     [payload.sub],
   );
@@ -100,7 +101,7 @@ export const logout = asyncHandler(async (_req, res) => {
 
 export const me = asyncHandler(async (req, res) => {
   const { rows } = await query(
-    `SELECT id, email, full_name, role, avatar_url, bio, preferences, last_login_at, created_at
+    `SELECT id, email, full_name, role, primary_subject, avatar_url, bio, preferences, last_login_at, created_at
      FROM users WHERE id=$1 AND deleted_at IS NULL`,
     [req.user.id],
   );

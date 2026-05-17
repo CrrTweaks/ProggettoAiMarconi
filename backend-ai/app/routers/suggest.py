@@ -38,19 +38,64 @@ def _format_italian_date(value) -> str:
     return f"{_IT_WEEKDAYS[d.weekday()]} {d.day} {_IT_MONTHS[d.month - 1]} {d.year}"
 
 
-def _heuristic_score(day: dict) -> float:
-    # Carico minore uguale punteggio maggiore
-    load = (day.get("homework", 0) * 0.5
-            + day.get("exams", 0) * 1.5
-            + day.get("interrogations", 0) * 1.0)
-    return max(0.0, 5.0 - load)
+def _heuristic_score(day: dict, all_days: list) -> float:
+    """Euristica che valuta un giorno relativamente agli altri della settimana.
+    - Punteggio base normalizzato sul carico min/max della settimana (1.0-5.0).
+    - Bonus per giorno della settimana: mercoledì (+0.2), martedì/giovedì (+0.1).
+    """
+    own_load = (day.get("homework", 0) * 0.5
+                + day.get("exams", 0) * 1.5
+                + day.get("interrogations", 0) * 1.0)
+
+    # Normalizzazione sul carico della settimana
+    loads = [
+        d.get("homework", 0) * 0.5 + d.get("exams", 0) * 1.5 + d.get("interrogations", 0) * 1.0
+        for d in all_days
+    ]
+    max_load = max(loads) if loads else 0
+    min_load = min(loads) if loads else 0
+    range_load = max_load - min_load
+
+    if range_load > 0:
+        # 1.0 = giorno peggiore, 5.0 = giorno migliore della settimana
+        base_score = 1.0 + 4.0 * (max_load - own_load) / range_load
+    else:
+        # Tutti uguali: punteggio assoluto (ma senza mai essere perfetto)
+        base_score = max(0.0, 5.0 - own_load)
+
+    # Bonus per giorno della settimana (mercoledì ideale per verifiche)
+    try:
+        d = datetime.fromisoformat(str(day.get("day", ""))).date()
+        dow = d.weekday()  # 0=lun, 2=mer, 4=ven
+        dow_bonus = {0: 0, 1: 0.1, 2: 0.2, 3: 0.1, 4: 0}.get(dow, 0)
+        base_score += dow_bonus
+    except (ValueError, TypeError):
+        pass
+
+    return round(max(0.0, base_score), 1)
+
+
+def _is_valid_school_day(day_str: str) -> bool:
+    try:
+        d = datetime.fromisoformat(day_str).date()
+    except ValueError:
+        return False
+    # Esclude date già passate
+    if d < date.today():
+        return False
+    # Esclude sabati e domeniche (settimana corta)
+    if d.weekday() >= 5:
+        return False
+    return True
 
 
 @router.post("/exam-day", response_model=SuggestExamResponse)
 async def suggest_exam_day(req: SuggestExamRequest):
     workload = [d.model_dump() for d in req.workload]
+    # Difesa in profondità: scarta giorni non validi
+    workload = [d for d in workload if _is_valid_school_day(str(d.get("day", "")))]
     ranking = sorted(
-        ({"day": str(d["day"]), "score": _heuristic_score(d), **d} for d in workload),
+        ({"day": str(d["day"]), "score": _heuristic_score(d, workload), **d} for d in workload),
         key=lambda x: x["score"], reverse=True,
     )
     best = ranking[0] if ranking else {"day": "", "score": 0.0}

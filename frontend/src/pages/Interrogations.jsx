@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, isAfter } from "date-fns";
 import { it as itLocale } from "date-fns/locale";
 import { motion } from "framer-motion";
-import { GraduationCap, Plus, Trash2, Loader2 } from "lucide-react";
+import { GraduationCap, Plus, Trash2, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { api } from "@/lib/api";
@@ -23,16 +23,31 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import {
+  getNonSchoolReason,
+  isSchoolDay,
+  nextSchoolDay,
+} from "@/lib/schoolCalendar";
+import ClassFilter from "@/components/shared/ClassFilter";
+import {
+  useTeacherSubjects,
+  buildSubjectMap,
+} from "@/hooks/useTeacherSubjects";
 
 export default function Interrogations() {
   const { user } = useAuth();
   const isTeacher = user?.role === "teacher" || user?.role === "admin";
   const qc = useQueryClient();
+  const [selectedClass, setSelectedClass] = useState("");
 
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ["interrogations"],
-    queryFn: async () =>
-      (await api.get("/interrogations")).data.interrogations || [],
+    queryKey: ["interrogations", selectedClass],
+    queryFn: async () => {
+      const params = {};
+      if (selectedClass) params.class_id = selectedClass;
+      return (await api.get("/interrogations", { params })).data
+        .interrogations || [];
+    },
   });
 
   const remove = useMutation({
@@ -49,8 +64,16 @@ export default function Interrogations() {
         icon={GraduationCap}
         title="Interrogazioni"
         subtitle="Verifiche orali · pianificate e valutate"
-        actions={isTeacher ? <NewInterrogationDialog /> : null}
+        actions={
+          isTeacher ? (
+            <div className="flex items-center gap-2">
+              <SuggestFreeDayDialog />
+              <NewInterrogationDialog />
+            </div>
+          ) : null
+        }
       />
+      <ClassFilter value={selectedClass} onChange={setSelectedClass} />
       {isLoading ? (
         <div className="grid place-items-center py-20">
           <Loader2 className="size-6 animate-spin text-muted-fg" />
@@ -122,6 +145,140 @@ export default function Interrogations() {
   );
 }
 
+function SuggestFreeDayDialog() {
+  const [open, setOpen] = useState(false);
+  const [classId, setClassId] = useState("");
+  const [weekStart, setWeekStart] = useState(
+    format(nextSchoolDay(new Date()), "yyyy-MM-dd"),
+  );
+  const [hint, setHint] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const weekStartReason = getNonSchoolReason(weekStart);
+
+  const { data: classes = [] } = useQuery({
+    queryKey: ["classes"],
+    enabled: open,
+    queryFn: async () => (await api.get("/classes")).data.classes || [],
+  });
+
+  const ask = async () => {
+    if (!classId) return toast.warning("Seleziona prima una classe");
+    setLoading(true);
+    setHint(null);
+    try {
+      const { data } = await api.post("/ai/suggest/exam-day", {
+        class_id: classId,
+        week_start: weekStart,
+      });
+      setHint(data);
+      toast.success("Suggerimento AI pronto");
+    } catch (e) {
+      toast.error(e.response?.data?.error || "AI non disponibile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (v) {
+          setWeekStart(format(nextSchoolDay(new Date()), "yyyy-MM-dd"));
+        }
+        if (!v) {
+          setHint(null);
+          setClassId("");
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button variant="outline">
+          <Sparkles className="size-4" /> Suggerisci giorno libero
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Pianificatore AI · giorno migliore</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-xs text-muted-fg">
+            L’AI analizza il carico della settimana (compiti, verifiche,
+            interrogazioni) e propone il giorno più leggero per programmare
+            una nuova interrogazione.
+          </p>
+          <div className="space-y-1.5">
+            <Label>Classe</Label>
+            <select
+              value={classId}
+              onChange={(e) => setClassId(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-border bg-elevated/40 px-3 text-sm"
+            >
+              <option value="" disabled>
+                Seleziona classe…
+              </option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Inizio settimana</Label>
+            <Input
+              type="date"
+              value={weekStart}
+              onChange={(e) => setWeekStart(e.target.value)}
+              aria-invalid={!!weekStartReason}
+              className={cn(weekStartReason && "border-danger ring-danger/30")}
+            />
+            {weekStartReason && (
+              <p className="text-xs text-danger">⚠ {weekStartReason}</p>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="gradient"
+            className="w-full"
+            onClick={ask}
+            disabled={loading || !!weekStartReason}
+          >
+            {loading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Sparkles className="size-4" />
+            )}
+            {loading ? "Sto analizzando…" : "Chiedi all’AI"}
+          </Button>
+          {hint && (
+            <div className="rounded-lg border border-border/60 bg-elevated/40 p-3 text-sm">
+              <div className="font-semibold text-primary">
+                {hint.best_day
+                  ? format(parseISO(hint.best_day), "EEEE d MMMM yyyy", {
+                      locale: itLocale,
+                    })
+                  : "—"}
+              </div>
+              {hint.reasoning && (
+                <div className="mt-1 text-xs text-muted-fg">
+                  {hint.reasoning}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Chiudi
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function NewInterrogationDialog() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -131,16 +288,26 @@ function NewInterrogationDialog() {
     subject: "",
     topic: "",
     scheduled_for: format(
-      new Date(Date.now() + 7 * 86400_000),
+      nextSchoolDay(new Date(Date.now() + 7 * 86400_000)),
       "yyyy-MM-dd'T'HH:mm",
     ),
   });
+
+  const dateReason = getNonSchoolReason(form.scheduled_for);
 
   const { data: classes = [] } = useQuery({
     queryKey: ["classes"],
     enabled: open,
     queryFn: async () => (await api.get("/classes")).data.classes || [],
   });
+
+  const { data: teacherSubjects = [] } = useTeacherSubjects();
+  const subjectMap = buildSubjectMap(teacherSubjects);
+
+  const handleClassChange = (classId) => {
+    const subj = subjectMap[classId] || "";
+    setForm((f) => ({ ...f, class_id: classId, student_id: "", subject: subj }));
+  };
 
   const { data: classDetail } = useQuery({
     queryKey: ["class-detail", form.class_id],
@@ -173,6 +340,12 @@ function NewInterrogationDialog() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            if (!isSchoolDay(form.scheduled_for)) {
+              toast.error(
+                `Non puoi programmare interrogazioni in questo giorno: ${getNonSchoolReason(form.scheduled_for)}`,
+              );
+              return;
+            }
             const payload = { ...form };
             if (!payload.student_id) delete payload.student_id;
             if (!payload.subject) delete payload.subject;
@@ -186,13 +359,7 @@ function NewInterrogationDialog() {
             <select
               required
               value={form.class_id}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  class_id: e.target.value,
-                  student_id: "",
-                }))
-              }
+              onChange={(e) => handleClassChange(e.target.value)}
               className="flex h-10 w-full rounded-md border border-border bg-elevated/40 px-3 text-sm"
             >
               <option value="" disabled>
@@ -229,10 +396,20 @@ function NewInterrogationDialog() {
               <Label>Materia</Label>
               <Input
                 value={form.subject}
+                readOnly={!!subjectMap[form.class_id]}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, subject: e.target.value }))
                 }
+                className={cn(
+                  !!subjectMap[form.class_id] &&
+                    "bg-elevated/60 text-muted-fg cursor-not-allowed",
+                )}
               />
+              {!!subjectMap[form.class_id] && (
+                <p className="text-[10px] text-muted-fg">
+                  Materia assegnata per questa classe
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Data e ora</Label>
@@ -243,7 +420,12 @@ function NewInterrogationDialog() {
                 onChange={(e) =>
                   setForm((f) => ({ ...f, scheduled_for: e.target.value }))
                 }
+                aria-invalid={!!dateReason}
+                className={cn(dateReason && "border-danger ring-danger/30")}
               />
+              {dateReason && (
+                <p className="text-xs text-danger">⚠ {dateReason}</p>
+              )}
             </div>
           </div>
           <div className="space-y-1.5">
@@ -267,7 +449,7 @@ function NewInterrogationDialog() {
             <Button
               type="submit"
               variant="gradient"
-              disabled={create.isPending}
+              disabled={create.isPending || !!dateReason}
             >
               {create.isPending ? (
                 <Loader2 className="size-4 animate-spin" />

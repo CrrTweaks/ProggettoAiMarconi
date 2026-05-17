@@ -11,9 +11,11 @@ router.use(requireAuth);
 router.get("/", ctl.list);
 router.get("/:id", ctl.getById);
 
+// Solo admin puo' creare/eliminare classi e gestire membri.
+// I docenti possono modificare i metadati (descrizione/colore) della loro classe.
 router.post(
   "/",
-  requireRole("teacher", "admin"),
+  requireRole("admin"),
   validate([
     body("name").isString().trim().notEmpty(),
     body("school_year").isString().trim().notEmpty(),
@@ -26,12 +28,12 @@ router.post(
 
 router.put("/:id", requireRole("teacher", "admin"), ctl.update);
 
-router.delete("/:id", requireRole("teacher", "admin"), ctl.remove);
+router.delete("/:id", requireRole("admin"), ctl.remove);
 
-router.post("/:id/members", requireRole("teacher", "admin"), ctl.addMember);
+router.post("/:id/members", requireRole("admin"), ctl.addMember);
 router.delete(
   "/:id/members/:userId",
-  requireRole("teacher", "admin"),
+  requireRole("admin"),
   ctl.removeMember,
 );
 
