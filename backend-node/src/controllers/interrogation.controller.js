@@ -10,7 +10,9 @@ import {
 export const list = asyncHandler(async (req, res) => {
   const { class_id, subject, student_id, from, to } = req.query;
   const params = [req.user.id];
-  let where = `i.class_id IN (
+  let where = req.user.role === "admin"
+    ? `i.class_id IN (SELECT id FROM classes WHERE deleted_at IS NULL AND $1::uuid=$1::uuid)`
+    : `i.class_id IN (
     SELECT c.id FROM classes c
     LEFT JOIN class_members m ON m.class_id=c.id AND m.user_id=$1
     WHERE c.deleted_at IS NULL AND (c.owner_id=$1 OR m.user_id IS NOT NULL))`;
@@ -77,7 +79,10 @@ export const create = asyncHandler(async (req, res) => {
       [req.user.id, class_id, subject],
     );
     if (!subjCheck[0]) {
-      throw new HttpError(403, "Non sei assegnato a insegnare questa materia nella classe selezionata");
+      throw new HttpError(
+        403,
+        "Non sei assegnato a insegnare questa materia nella classe selezionata",
+      );
     }
   }
 
@@ -87,7 +92,9 @@ export const create = asyncHandler(async (req, res) => {
     [
       class_id,
       student_id || null,
-      req.user.id,
+      req.user.role === "admin" && req.body.teacher_id
+        ? req.body.teacher_id
+        : req.user.id,
       subject || null,
       topic || null,
       scheduled_for,
@@ -113,11 +120,16 @@ export const create = asyncHandler(async (req, res) => {
 
 export const update = asyncHandler(async (req, res) => {
   const { subject, topic, scheduled_for, grade, notes } = req.body;
-  await assertResourceClassMembership(req.user, "interrogations", req.params.id);
+  await assertResourceClassMembership(
+    req.user,
+    "interrogations",
+    req.params.id,
+  );
 
   if (req.user.role === "teacher" && subject) {
     const { rows: r } = await query(
-      `SELECT class_id FROM interrogations WHERE id=$1`, [req.params.id],
+      `SELECT class_id FROM interrogations WHERE id=$1`,
+      [req.params.id],
     );
     const { rows: subjCheck } = await query(
       `SELECT 1 FROM schedules
@@ -126,7 +138,10 @@ export const update = asyncHandler(async (req, res) => {
       [req.user.id, r[0].class_id, subject],
     );
     if (!subjCheck[0]) {
-      throw new HttpError(403, "Non sei assegnato a insegnare questa materia nella classe selezionata");
+      throw new HttpError(
+        403,
+        "Non sei assegnato a insegnare questa materia nella classe selezionata",
+      );
     }
   }
 
@@ -145,7 +160,11 @@ export const update = asyncHandler(async (req, res) => {
 });
 
 export const remove = asyncHandler(async (req, res) => {
-  await assertResourceClassMembership(req.user, "interrogations", req.params.id);
+  await assertResourceClassMembership(
+    req.user,
+    "interrogations",
+    req.params.id,
+  );
   await query("DELETE FROM interrogations WHERE id=$1", [req.params.id]);
   res.json({ ok: true });
 });

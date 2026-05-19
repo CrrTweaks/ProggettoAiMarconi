@@ -35,7 +35,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { initials, roleLabel } from "@/lib/utils";
+import { cn, initials, roleLabel } from "@/lib/utils";
 
 const COLORS = [
   "#3b82f6",
@@ -59,7 +59,8 @@ export default function Classes() {
 
   const { data: mySubjects = [] } = useQuery({
     queryKey: ["me", "subjects"],
-    queryFn: async () => (await api.get("/users/me/subjects")).data.subjects || [],
+    queryFn: async () =>
+      (await api.get("/users/me/subjects")).data.subjects || [],
     enabled: isTeacher,
     staleTime: 5 * 60 * 1000,
   });
@@ -157,7 +158,10 @@ function ClassCard({ cls, idx, mySubject, onDelete }) {
               </Badge>
             )}
             {isTeacher && mySubject && (
-              <Badge variant="outline" className="mt-1.5 text-[10px] border-primary/30 text-primary">
+              <Badge
+                variant="outline"
+                className="mt-1.5 text-[10px] border-primary/30 text-primary"
+              >
                 Insegna: {mySubject}
               </Badge>
             )}
@@ -324,13 +328,19 @@ function MembersDialog({ classId, className, members, readOnly }) {
           className="text-muted-fg hover:text-primary"
           title={readOnly ? "Visualizza membri" : "Gestisci membri"}
         >
-          {readOnly ? <Eye className="size-4" /> : <UserPlus className="size-4" />}
+          {readOnly ? (
+            <Eye className="size-4" />
+          ) : (
+            <UserPlus className="size-4" />
+          )}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {readOnly ? "Membri della classe" : `Gestisci membri · ${className}`}
+            {readOnly
+              ? "Membri della classe"
+              : `Gestisci membri · ${className}`}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
@@ -348,34 +358,34 @@ function MembersDialog({ classId, className, members, readOnly }) {
               </div>
               {q.trim().length >= 2 && (
                 <div className="max-h-48 overflow-y-auto rounded-md border border-border/40 bg-elevated/40">
-                {isFetching ? (
-                  <div className="grid place-items-center p-4">
-                    <Loader2 className="size-4 animate-spin text-muted-fg" />
-                  </div>
-                ) : candidates.length === 0 ? (
-                  <div className="p-3 text-sm text-muted-fg">
-                    Nessun risultato.
-                  </div>
-                ) : (
-                  candidates.map((u) => (
-                    <button
-                      key={u.id}
-                      type="button"
-                      onClick={() => add.mutate(u.id)}
-                      disabled={add.isPending}
-                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-elevated/80 transition"
-                    >
-                      <div>
-                        <div className="font-medium">{u.full_name}</div>
-                        <div className="text-xs text-muted-fg">{u.email}</div>
-                      </div>
-                      <Plus className="size-4 text-primary" />
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
+                  {isFetching ? (
+                    <div className="grid place-items-center p-4">
+                      <Loader2 className="size-4 animate-spin text-muted-fg" />
+                    </div>
+                  ) : candidates.length === 0 ? (
+                    <div className="p-3 text-sm text-muted-fg">
+                      Nessun risultato.
+                    </div>
+                  ) : (
+                    candidates.map((u) => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => add.mutate(u.id)}
+                        disabled={add.isPending}
+                        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-elevated/80 transition"
+                      >
+                        <div>
+                          <div className="font-medium">{u.full_name}</div>
+                          <div className="text-xs text-muted-fg">{u.email}</div>
+                        </div>
+                        <Plus className="size-4 text-primary" />
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           <div className="space-y-2">
@@ -443,7 +453,7 @@ function ScheduleDialog({ classId, className, readOnly }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
-    weekday: "0",
+    weekday: 1,
     start_time: "08:00",
     end_time: "09:00",
     subject: "",
@@ -453,13 +463,16 @@ function ScheduleDialog({ classId, className, readOnly }) {
 
   const { data: schedules = [] } = useQuery({
     queryKey: ["schedules", classId],
-    queryFn: async () => (await api.get(`/schedules/class/${classId}`)).data.schedules || [],
+    queryFn: async () =>
+      (await api.get(`/schedules/class/${classId}`)).data.schedules || [],
     enabled: open,
   });
 
-  const { data: teachers = [] } = useQuery({
+  const { data: allTeachers = [] } = useQuery({
     queryKey: ["teachers-list"],
-    queryFn: async () => (await api.get("/users", { params: { role: "teacher" } })).data.users || [],
+    queryFn: async () =>
+      (await api.get("/users", { params: { role: "teacher" } })).data.users ||
+      [],
     enabled: open && !readOnly,
   });
 
@@ -470,7 +483,7 @@ function ScheduleDialog({ classId, className, readOnly }) {
       qc.invalidateQueries({ queryKey: ["class-detail", classId] });
       toast.success("Slot aggiunto");
       setForm({
-        weekday: "0",
+        weekday: 1,
         start_time: "08:00",
         end_time: "09:00",
         subject: "",
@@ -478,7 +491,8 @@ function ScheduleDialog({ classId, className, readOnly }) {
         teacher_id: "",
       });
     },
-    onError: (e) => toast.error(e.response?.data?.error || "Impossibile aggiungere"),
+    onError: (e) =>
+      toast.error(e.response?.data?.error || "Impossibile aggiungere"),
   });
 
   const remove = useMutation({
@@ -489,6 +503,21 @@ function ScheduleDialog({ classId, className, readOnly }) {
       toast.success("Slot rimosso");
     },
   });
+
+  const slots = [...new Set(schedules.map((s) => s.start_time))].sort();
+  const days = [1, 2, 3, 4, 5];
+
+  const busyTeachers = new Set(
+    schedules
+      .filter(
+        (s) =>
+          s.teacher_id &&
+          s.weekday === form.weekday &&
+          s.start_time === form.start_time,
+      )
+      .map((s) => s.teacher_id),
+  );
+  const conflict = form.teacher_id && busyTeachers.has(form.teacher_id);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -502,84 +531,210 @@ function ScheduleDialog({ classId, className, readOnly }) {
           <Clock className="size-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>Orario · {className}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+
+        <div className="space-y-5">
+          {/* Vista tabellare */}
           {schedules.length === 0 ? (
-            <div className="rounded-md border border-border/40 bg-elevated/40 p-3 text-sm text-muted-fg">
+            <div className="rounded-md border border-border/40 bg-elevated/40 p-4 text-sm text-muted-fg text-center">
               Nessuno slot orario configurato.
             </div>
           ) : (
-            <div className="max-h-48 overflow-y-auto rounded-md border border-border/40 divide-y divide-border/40">
-              {schedules.map((s) => (
-                <div
-                  key={s.id}
-                  className="flex items-center justify-between gap-2 px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium">
-                      {s.subject}
-                    </div>
-                    <div className="text-xs text-muted-fg truncate">
-                      {s.teacher_name || "Nessun docente assegnato"}
-                      {s.room && ` · Aula ${s.room}`}
-                      {(s.start_time && s.start_time !== "00:00:00" && s.start_time !== "00:00") && ` · ${s.start_time?.slice(0, 5)}–${s.end_time?.slice(0, 5)}`}
-                    </div>
-                  </div>
-                  {!readOnly && (
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-muted-fg hover:text-danger"
-                      onClick={() => remove.mutate(s.id)}
-                      disabled={remove.isPending}
-                      title="Rimuovi"
-                    >
-                      <X className="size-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
+            <div className="overflow-x-auto rounded-xl border border-border/60 bg-panel/40">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr>
+                    <th className="sticky left-0 z-10 border-b border-r border-border/60 bg-panel/90 p-2 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-fg">
+                      Ora
+                    </th>
+                    {days.map((d) => (
+                      <th
+                        key={d}
+                        className="border-b border-border/60 bg-panel/80 p-2 text-center text-[10px] font-semibold uppercase tracking-wider text-muted-fg min-w-[110px]"
+                      >
+                        {WEEKDAYS[d - 1]}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {slots.map((slot, slotIdx) => (
+                    <tr key={slot}>
+                      <td className="sticky left-0 z-10 border-b border-r border-border/60 bg-panel/90 p-2 font-mono text-[10px] font-medium text-muted-fg">
+                        {slot}
+                      </td>
+                      {days.map((day) => {
+                        const lesson = schedules.find(
+                          (s) => s.weekday === day && s.start_time === slot,
+                        );
+                        return (
+                          <td
+                            key={day}
+                            className={cn(
+                              "border-b border-border/60 p-1.5 align-top min-w-[110px]",
+                              slotIdx % 2 === 0
+                                ? "bg-elevated/20"
+                                : "bg-transparent",
+                            )}
+                          >
+                            {lesson ? (
+                              <div className="relative rounded-md bg-primary/10 p-2 ring-1 ring-primary/20">
+                                <div className="text-[11px] font-semibold text-fg leading-tight">
+                                  {lesson.subject}
+                                </div>
+                                <div className="mt-0.5 text-[10px] text-muted-fg truncate">
+                                  {lesson.teacher_name}
+                                </div>
+                                <div className="text-[10px] text-muted-fg/80">
+                                  {lesson.room}
+                                </div>
+                                {!readOnly && (
+                                  <button
+                                    type="button"
+                                    onClick={() => remove.mutate(lesson.id)}
+                                    className="absolute top-0.5 right-0.5 text-muted-fg/60 hover:text-danger"
+                                    title="Rimuovi"
+                                  >
+                                    <X className="size-3" />
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="h-10" />
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
 
+          {/* Form admin */}
           {!readOnly && (
-            <div className="space-y-2 rounded-lg border border-border/60 bg-elevated/30 p-3">
-              <div className="text-sm font-medium">Nuova assegnazione</div>
-              <div className="space-y-2">
+            <div className="space-y-3 rounded-xl border border-border/60 bg-elevated/30 p-4">
+              <div className="text-sm font-semibold">Aggiungi lezione</div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div className="space-y-1">
-                  <Label className="text-xs">Materia</Label>
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-fg">
+                    Giorno
+                  </Label>
+                  <select
+                    value={form.weekday}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, weekday: +e.target.value }))
+                    }
+                    className="flex h-9 w-full rounded-md border border-border bg-elevated/40 px-2 text-sm"
+                  >
+                    {days.map((d) => (
+                      <option key={d} value={d}>
+                        {WEEKDAYS[d - 1]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-fg">
+                    Inizio
+                  </Label>
+                  <Input
+                    type="time"
+                    value={form.start_time}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, start_time: e.target.value }))
+                    }
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-fg">
+                    Fine
+                  </Label>
+                  <Input
+                    type="time"
+                    value={form.end_time}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, end_time: e.target.value }))
+                    }
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-fg">
+                    Aula
+                  </Label>
+                  <Input
+                    value={form.room}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, room: e.target.value }))
+                    }
+                    placeholder="Aula 12"
+                    className="h-9"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-fg">
+                    Materia
+                  </Label>
                   <Input
                     value={form.subject}
-                    onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, subject: e.target.value }))
+                    }
                     placeholder="Matematica"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Docente</Label>
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-fg">
+                    Docente
+                    {conflict && (
+                      <span className="ml-2 text-danger">
+                        ⚠ già occupato in questa fascia
+                      </span>
+                    )}
+                  </Label>
                   <select
                     value={form.teacher_id}
-                    onChange={(e) => setForm((f) => ({ ...f, teacher_id: e.target.value }))}
-                    className="flex h-9 w-full rounded-md border border-border bg-elevated/40 px-2 text-sm"
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, teacher_id: e.target.value }))
+                    }
+                    className={cn(
+                      "flex h-10 w-full rounded-md border bg-elevated/40 px-2 text-sm",
+                      conflict
+                        ? "border-danger ring-danger/30"
+                        : "border-border",
+                    )}
                   >
                     <option value="">— Nessun docente —</option>
-                    {teachers.map((t) => (
-                      <option key={t.id} value={t.id}>{t.full_name}</option>
+                    {allTeachers.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.full_name}{" "}
+                        {busyTeachers.has(t.id) ? "(occupato)" : ""}
+                      </option>
                     ))}
                   </select>
                 </div>
               </div>
               <Button
                 type="button"
-                variant="outline"
+                variant="gradient"
                 className="w-full"
-                disabled={!form.subject || add.isPending}
+                disabled={!form.subject || add.isPending || conflict}
                 onClick={() =>
                   add.mutate({
                     class_id: classId,
+                    weekday: form.weekday,
+                    start_time: form.start_time,
+                    end_time: form.end_time,
                     subject: form.subject,
+                    room: form.room || undefined,
                     teacher_id: form.teacher_id || undefined,
                   })
                 }
@@ -589,7 +744,7 @@ function ScheduleDialog({ classId, className, readOnly }) {
                 ) : (
                   <Plus className="size-4" />
                 )}
-                Assegna docente
+                Aggiungi slot
               </Button>
             </div>
           )}

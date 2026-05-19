@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion } from "framer-motion";
-import { BookOpen, Plus, Trash2, Loader2 } from "lucide-react";
+import { BookOpen, Plus, Trash2, Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { api } from "@/lib/api";
@@ -45,6 +45,15 @@ export default function Lessons() {
     },
   });
 
+  const byClass = lessons.reduce((acc, l) => {
+    const cName = l.class_name || "Sconosciuta";
+    if (!acc[cName]) acc[cName] = [];
+    acc[cName].push(l);
+    return acc;
+  }, {});
+
+  const sortedClasses = Object.keys(byClass).sort();
+
   const remove = useMutation({
     mutationFn: (id) => api.delete(`/lessons/${id}`),
     onSuccess: () => {
@@ -74,50 +83,65 @@ export default function Lessons() {
           description="I docenti possono registrare qui gli argomenti trattati."
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {lessons.map((l, i) => (
-            <motion.div
-              key={l.id}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.02 }}
-              className="group rounded-xl border border-border/60 bg-panel/60 backdrop-blur-xl p-5 shadow-card hover:ring-1 hover:ring-primary/30 transition-all"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <Badge variant="default">{l.class_name}</Badge>
-                  <h3 className="mt-2 font-semibold tracking-tight">
-                    {l.title}
-                  </h3>
-                  {l.topic && (
-                    <p className="mt-1 text-sm text-muted-fg">{l.topic}</p>
-                  )}
-                  {l.notes && (
-                    <p className="mt-2 text-xs text-muted-fg/80 line-clamp-3">
-                      {l.notes}
-                    </p>
-                  )}
+        <div className="space-y-8">
+          {sortedClasses.map((cName) => {
+            const classItems = byClass[cName];
+            return (
+              <div key={cName} className="space-y-5 rounded-2xl border border-border/40 bg-panel/30 p-5 md:p-6 backdrop-blur-md shadow-sm">
+                <div className="flex items-center gap-3 border-b border-border/40 pb-4">
+                  <div className="grid size-10 place-items-center rounded-xl bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/20 shadow-inner">
+                    <Users className="size-5" />
+                  </div>
+                  <h2 className="text-xl font-bold tracking-tight">{cName}</h2>
                 </div>
-                {isTeacher && (
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="opacity-0 group-hover:opacity-100 text-muted-fg hover:text-danger"
-                    onClick={() => remove.mutate(l.id)}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                )}
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 pt-2">
+                  {classItems.map((l, i) => (
+                    <motion.div
+                      key={l.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.02 }}
+                      className="group rounded-xl border border-border/60 bg-panel/60 backdrop-blur-xl p-5 shadow-card hover:ring-1 hover:ring-primary/30 transition-all"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <Badge variant="default">{l.class_name}</Badge>
+                          <h3 className="mt-2 font-semibold tracking-tight">
+                            {l.title}
+                          </h3>
+                          {l.topic && (
+                            <p className="mt-1 text-sm text-muted-fg">{l.topic}</p>
+                          )}
+                          {l.notes && (
+                            <p className="mt-2 text-xs text-muted-fg/80 line-clamp-3">
+                              {l.notes}
+                            </p>
+                          )}
+                        </div>
+                        {isTeacher && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="opacity-0 group-hover:opacity-100 text-muted-fg hover:text-danger"
+                            onClick={() => remove.mutate(l.id)}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="mt-3 flex items-center justify-between text-xs text-muted-fg">
+                        <span>{l.teacher_name || ""}</span>
+                        <span className="font-mono">
+                          {format(parseISO(l.taught_on), "d MMM yyyy", { locale: it })}{" "}
+                          · {l.duration_min}min
+                        </span>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
               </div>
-              <div className="mt-3 flex items-center justify-between text-xs text-muted-fg">
-                <span>{l.teacher_name || ""}</span>
-                <span className="font-mono">
-                  {format(parseISO(l.taught_on), "d MMM yyyy", { locale: it })}{" "}
-                  · {l.duration_min}min
-                </span>
-              </div>
-            </motion.div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -126,6 +150,8 @@ export default function Lessons() {
 
 function NewLessonDialog() {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     class_id: "",
@@ -134,6 +160,7 @@ function NewLessonDialog() {
     notes: "",
     taught_on: format(nextSchoolDay(new Date()), "yyyy-MM-dd"),
     duration_min: 60,
+    teacher_id: "",
   });
 
   const dateReason = getNonSchoolReason(form.taught_on);
@@ -142,6 +169,14 @@ function NewLessonDialog() {
     queryKey: ["classes"],
     queryFn: async () => (await api.get("/classes")).data.classes || [],
     enabled: open,
+  });
+
+  const { data: allTeachers = [] } = useQuery({
+    queryKey: ["teachers-list"],
+    queryFn: async () =>
+      (await api.get("/users", { params: { role: "teacher" } })).data.users ||
+      [],
+    enabled: open && isAdmin,
   });
 
   const create = useMutation({
@@ -158,6 +193,7 @@ function NewLessonDialog() {
         notes: "",
         taught_on: format(nextSchoolDay(new Date()), "yyyy-MM-dd"),
         duration_min: 60,
+        teacher_id: "",
       });
     },
     onError: (e) => toast.error(e.response?.data?.error || "Impossibile"),
@@ -226,6 +262,25 @@ function NewLessonDialog() {
               }
             />
           </div>
+          {isAdmin && (
+            <div className="space-y-1.5">
+              <Label>Docente</Label>
+              <select
+                value={form.teacher_id}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, teacher_id: e.target.value }))
+                }
+                className="flex h-10 w-full rounded-md border border-border bg-elevated/40 px-3 text-sm"
+              >
+                <option value="">— Seleziona docente —</option>
+                {allTeachers.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label>Note</Label>
             <Textarea

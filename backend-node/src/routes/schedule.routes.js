@@ -7,6 +7,7 @@ import { validate } from "../middleware/validate.js";
 const router = Router();
 router.use(requireAuth);
 
+router.get("/me", ctrl.listMySchedules);
 router.get("/class/:classId", ctrl.listByClass);
 
 router.post(
@@ -14,8 +15,12 @@ router.post(
   validate([
     body("class_id").isUUID(),
     body("weekday").optional().isInt({ min: 0, max: 6 }),
-    body("start_time").optional().matches(/^\d{2}:\d{2}$/),
-    body("end_time").optional().matches(/^\d{2}:\d{2}$/),
+    body("start_time")
+      .optional()
+      .matches(/^\d{2}:\d{2}$/),
+    body("end_time")
+      .optional()
+      .matches(/^\d{2}:\d{2}$/),
     body("subject").isString().trim().notEmpty(),
     body("room").optional().trim(),
     body("teacher_id").optional().isUUID(),
@@ -27,8 +32,12 @@ router.put(
   "/:id",
   validate([
     body("weekday").optional().isInt({ min: 0, max: 6 }),
-    body("start_time").optional().matches(/^\d{2}:\d{2}$/),
-    body("end_time").optional().matches(/^\d{2}:\d{2}$/),
+    body("start_time")
+      .optional()
+      .matches(/^\d{2}:\d{2}$/),
+    body("end_time")
+      .optional()
+      .matches(/^\d{2}:\d{2}$/),
     body("subject").isString().trim().notEmpty(),
     body("room").optional().trim(),
     body("teacher_id").optional().isUUID(),

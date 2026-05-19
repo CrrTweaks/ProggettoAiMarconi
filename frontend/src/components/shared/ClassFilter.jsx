@@ -7,7 +7,7 @@ import { Users } from "lucide-react";
  * Tabs orizzontali per filtrare risorse per classe.
  * value: "" = tutte le classi, altrimenti class_id.
  */
-export default function ClassFilter({ value, onChange }) {
+export default function ClassFilter({ value, onChange, hideAll = false }) {
   const { data: classes = [] } = useQuery({
     queryKey: ["classes"],
     queryFn: async () => (await api.get("/classes")).data.classes || [],
@@ -18,18 +18,20 @@ export default function ClassFilter({ value, onChange }) {
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <button
-        onClick={() => onChange("")}
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition",
-          value === ""
-            ? "bg-primary text-primary-fg shadow-sm"
-            : "bg-elevated/40 text-muted-fg hover:bg-elevated/70 hover:text-fg"
-        )}
-      >
-        <Users className="size-3" />
-        Tutte
-      </button>
+      {!hideAll && (
+        <button
+          onClick={() => onChange("")}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition",
+            value === ""
+              ? "bg-primary text-primary-fg shadow-sm"
+              : "bg-elevated/40 text-muted-fg hover:bg-elevated/70 hover:text-fg"
+          )}
+        >
+          <Users className="size-3" />
+          Tutte
+        </button>
+      )}
       {classes.map((c) => (
         <button
           key={c.id}

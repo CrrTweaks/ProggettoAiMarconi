@@ -21,7 +21,7 @@ export const events = asyncHandler(async (req, res) => {
   // Limita alle classi dell utente corrente o a quelle che possiede, salvo admin
   const userClasses =
     req.user.role === "admin"
-      ? `(SELECT id FROM classes WHERE deleted_at IS NULL${class_id ? " AND id=$4" : ""})`
+      ? `(SELECT id FROM classes WHERE deleted_at IS NULL AND $1::uuid=$1::uuid${class_id ? " AND id=$4" : ""})`
       : `(SELECT c.id FROM classes c
         LEFT JOIN class_members m ON m.class_id=c.id AND m.user_id=$1
         WHERE c.deleted_at IS NULL AND (c.owner_id=$1 OR m.user_id IS NOT NULL)${classFilter})`;
@@ -65,7 +65,9 @@ export const workload = asyncHandler(async (req, res) => {
   const start = req.query.week_start || new Date().toISOString().slice(0, 10);
   const userId = req.user.id;
 
-  const userClasses = `(SELECT c.id FROM classes c
+  const userClasses = req.user.role === "admin"
+    ? `(SELECT id FROM classes WHERE deleted_at IS NULL AND $1::uuid=$1::uuid)`
+    : `(SELECT c.id FROM classes c
        LEFT JOIN class_members m ON m.class_id=c.id AND m.user_id=$1
        WHERE c.deleted_at IS NULL AND (c.owner_id=$1 OR m.user_id IS NOT NULL))`;
 

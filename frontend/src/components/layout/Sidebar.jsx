@@ -2,6 +2,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
+  Clock,
   Calendar,
   BookOpen,
   GraduationCap,
@@ -36,6 +37,7 @@ const NAV_GROUPS = [
     items: [
       { to: "/homework", icon: ClipboardList, label: "Compiti" },
       { to: "/lessons", icon: BookOpen, label: "Lezioni" },
+      { to: "/schedule", icon: Clock, label: "Orario" },
       { to: "/exams", icon: FileText, label: "Verifiche" },
       { to: "/interrogations", icon: GraduationCap, label: "Interrogazioni" },
     ],

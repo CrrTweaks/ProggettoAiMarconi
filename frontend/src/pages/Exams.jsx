@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, isAfter } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion } from "framer-motion";
-import { FileText, Plus, Trash2, Loader2, Sparkles } from "lucide-react";
+import { FileText, Plus, Trash2, Loader2, Sparkles, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { api } from "@/lib/api";
@@ -58,10 +58,15 @@ export default function Exams() {
   });
 
   const today = new Date();
-  const upcoming = exams.filter((e) =>
-    isAfter(parseISO(e.scheduled_for), today),
-  );
-  const past = exams.filter((e) => !isAfter(parseISO(e.scheduled_for), today));
+  
+  const byClass = exams.reduce((acc, e) => {
+    const cName = e.class_name || "Sconosciuta";
+    if (!acc[cName]) acc[cName] = [];
+    acc[cName].push(e);
+    return acc;
+  }, {});
+
+  const sortedClasses = Object.keys(byClass).sort();
 
   return (
     <div className="space-y-6">
@@ -83,22 +88,31 @@ export default function Exams() {
         <div className="grid place-items-center py-20">
           <Loader2 className="size-6 animate-spin text-muted-fg" />
         </div>
+      ) : exams.length === 0 ? (
+        <EmptyState title="Nessuna verifica" description="Niente qui per ora." />
       ) : (
-        <>
-          <Group
-            title="Imminenti"
-            items={upcoming}
-            isTeacher={isTeacher}
-            onDelete={(id) => remove.mutate(id)}
-          />
-          <Group
-            title="Passati"
-            items={past}
-            isTeacher={isTeacher}
-            onDelete={(id) => remove.mutate(id)}
-            dim
-          />
-        </>
+        <div className="space-y-8">
+          {sortedClasses.map((cName) => {
+            const items = byClass[cName];
+            const eUpcoming = items.filter((e) => isAfter(parseISO(e.scheduled_for), today));
+            const ePast = items.filter((e) => !isAfter(parseISO(e.scheduled_for), today));
+
+            return (
+              <div key={cName} className="space-y-5 rounded-2xl border border-border/40 bg-panel/30 p-5 md:p-6 backdrop-blur-md shadow-sm">
+                <div className="flex items-center gap-3 border-b border-border/40 pb-4">
+                  <div className="grid size-10 place-items-center rounded-xl bg-accent/10 text-accent ring-1 ring-accent/20 shadow-inner">
+                    <Users className="size-5" />
+                  </div>
+                  <h2 className="text-xl font-bold tracking-tight">{cName}</h2>
+                </div>
+                <div className="space-y-6 pt-2">
+                  {eUpcoming.length > 0 && <Group title="Imminenti" items={eUpcoming} isTeacher={isTeacher} onDelete={(id) => remove.mutate(id)} />}
+                  {ePast.length > 0 && <Group title="Passati" items={ePast} isTeacher={isTeacher} onDelete={(id) => remove.mutate(id)} dim />}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
@@ -238,8 +252,8 @@ function SuggestFreeDayDialog() {
         <div className="space-y-3">
           <p className="text-xs text-muted-fg">
             L’AI analizza il carico della settimana (compiti, verifiche,
-            interrogazioni) e propone il giorno più leggero per programmare
-            una nuova prova.
+            interrogazioni) e propone il giorno più leggero per programmare una
+            nuova prova.
           </p>
           <div className="space-y-1.5">
             <Label>Classe</Label>
@@ -314,6 +328,8 @@ function SuggestFreeDayDialog() {
 
 function NewExamDialog() {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [open, setOpen] = useState(false);
   const [aiHint, setAiHint] = useState(null);
   const [form, setForm] = useState({
@@ -327,6 +343,7 @@ function NewExamDialog() {
     ),
     duration_min: 60,
     topics: "",
+    teacher_id: "",
   });
 
   const dateReason = getNonSchoolReason(form.scheduled_for);
@@ -340,8 +357,16 @@ function NewExamDialog() {
   const { data: teacherSubjects = [] } = useTeacherSubjects();
   const subjectMap = buildSubjectMap(teacherSubjects);
 
+  const { data: allTeachers = [] } = useQuery({
+    queryKey: ["teachers-list"],
+    queryFn: async () =>
+      (await api.get("/users", { params: { role: "teacher" } })).data.users ||
+      [],
+    enabled: open && isAdmin,
+  });
+
   const handleClassChange = (classId) => {
-    const subj = subjectMap[classId] || "";
+    const subj = isAdmin ? "" : subjectMap[classId] || "";
     setForm((f) => ({ ...f, class_id: classId, subject: subj }));
   };
 
@@ -434,16 +459,17 @@ function NewExamDialog() {
               <Label>Materia</Label>
               <Input
                 value={form.subject}
-                readOnly={!!subjectMap[form.class_id]}
+                readOnly={!isAdmin && !!subjectMap[form.class_id]}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, subject: e.target.value }))
                 }
                 className={cn(
-                  !!subjectMap[form.class_id] &&
+                  !isAdmin &&
+                    !!subjectMap[form.class_id] &&
                     "bg-elevated/60 text-muted-fg cursor-not-allowed",
                 )}
               />
-              {!!subjectMap[form.class_id] && (
+              {!isAdmin && !!subjectMap[form.class_id] && (
                 <p className="text-[10px] text-muted-fg">
                   Materia assegnata per questa classe
                 </p>
@@ -480,6 +506,25 @@ function NewExamDialog() {
               />
             </div>
           </div>
+          {isAdmin && (
+            <div className="space-y-1.5">
+              <Label>Docente</Label>
+              <select
+                value={form.teacher_id}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, teacher_id: e.target.value }))
+                }
+                className="flex h-10 w-full rounded-md border border-border bg-elevated/40 px-3 text-sm"
+              >
+                <option value="">— Seleziona docente —</option>
+                {allTeachers.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label>Descrizione</Label>
             <Textarea

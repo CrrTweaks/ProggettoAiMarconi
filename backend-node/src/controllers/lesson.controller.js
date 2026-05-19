@@ -9,7 +9,9 @@ import {
 export const list = asyncHandler(async (req, res) => {
   const { class_id, from, to } = req.query;
   const params = [req.user.id];
-  let where = `l.class_id IN (
+  let where = req.user.role === "admin"
+    ? `l.class_id IN (SELECT id FROM classes WHERE deleted_at IS NULL AND $1::uuid=$1::uuid)`
+    : `l.class_id IN (
     SELECT c.id FROM classes c
     LEFT JOIN class_members m ON m.class_id=c.id AND m.user_id=$1
     WHERE c.deleted_at IS NULL AND (c.owner_id=$1 OR m.user_id IS NOT NULL))`;
@@ -46,7 +48,9 @@ export const create = asyncHandler(async (req, res) => {
      VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
     [
       class_id,
-      req.user.id,
+      req.user.role === "admin" && req.body.teacher_id
+        ? req.body.teacher_id
+        : req.user.id,
       title,
       topic || null,
       notes || null,

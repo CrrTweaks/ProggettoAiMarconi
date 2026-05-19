@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, isAfter } from "date-fns";
 import { it as itLocale } from "date-fns/locale";
 import { motion } from "framer-motion";
-import { GraduationCap, Plus, Trash2, Loader2, Sparkles } from "lucide-react";
+import { GraduationCap, Plus, Trash2, Loader2, Sparkles, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { api } from "@/lib/api";
@@ -45,8 +45,9 @@ export default function Interrogations() {
     queryFn: async () => {
       const params = {};
       if (selectedClass) params.class_id = selectedClass;
-      return (await api.get("/interrogations", { params })).data
-        .interrogations || [];
+      return (
+        (await api.get("/interrogations", { params })).data.interrogations || []
+      );
     },
   });
 
@@ -57,6 +58,15 @@ export default function Interrogations() {
       toast.success("Rimossa");
     },
   });
+
+  const byClass = items.reduce((acc, it) => {
+    const cName = it.class_name || "Sconosciuta";
+    if (!acc[cName]) acc[cName] = [];
+    acc[cName].push(it);
+    return acc;
+  }, {});
+
+  const sortedClasses = Object.keys(byClass).sort();
 
   return (
     <div className="space-y-6">
@@ -84,61 +94,76 @@ export default function Interrogations() {
           description="Appariranno qui una volta programmate."
         />
       ) : (
-        <div className="grid gap-3">
-          {items.map((it) => (
-            <motion.div
-              key={it.id}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={cn(
-                "group flex items-center gap-4 rounded-xl border border-border/60 bg-panel/60 backdrop-blur-xl p-4 shadow-card",
-                "hover:ring-1 hover:ring-amber-400/30 transition-all",
-              )}
-            >
-              <div className="grid size-12 shrink-0 place-items-center rounded-lg bg-amber-500/10 text-amber-300 ring-1 ring-amber-500/20">
-                <GraduationCap className="size-5" />
+        <div className="space-y-8">
+          {sortedClasses.map((cName) => {
+            const classItems = byClass[cName];
+            return (
+              <div key={cName} className="space-y-5 rounded-2xl border border-border/40 bg-panel/30 p-5 md:p-6 backdrop-blur-md shadow-sm">
+                <div className="flex items-center gap-3 border-b border-border/40 pb-4">
+                  <div className="grid size-10 place-items-center rounded-xl bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20 shadow-inner">
+                    <Users className="size-5" />
+                  </div>
+                  <h2 className="text-xl font-bold tracking-tight">{cName}</h2>
+                </div>
+                <div className="grid gap-3 pt-2">
+                  {classItems.map((it) => (
+                    <motion.div
+                      key={it.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={cn(
+                        "group flex items-center gap-4 rounded-xl border border-border/60 bg-panel/60 backdrop-blur-xl p-4 shadow-card",
+                        "hover:ring-1 hover:ring-amber-400/30 transition-all",
+                      )}
+                    >
+                      <div className="grid size-12 shrink-0 place-items-center rounded-lg bg-amber-500/10 text-amber-300 ring-1 ring-amber-500/20">
+                        <GraduationCap className="size-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="warning">
+                            {it.subject || "Verifica orale"}
+                          </Badge>
+                          {it.grade != null && (
+                            <Badge variant="success">Voto: {it.grade}</Badge>
+                          )}
+                        </div>
+                        <div className="mt-1 truncate font-semibold">
+                          {it.topic || "Argomento da definire"}
+                        </div>
+                        <div className="text-xs text-muted-fg">
+                          {it.class_name} · {it.student_name || "Per tutta la classe"} ·
+                          con {it.teacher_name || "—"}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-mono text-sm text-amber-300">
+                          {format(parseISO(it.scheduled_for), "d MMM HH:mm", {
+                            locale: itLocale,
+                          })}
+                        </div>
+                        <div className="text-[11px] text-muted-fg">
+                          {isAfter(parseISO(it.scheduled_for), new Date())
+                            ? "imminente"
+                            : "passato"}
+                        </div>
+                      </div>
+                      {isTeacher && (
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          className="opacity-0 group-hover:opacity-100 text-muted-fg hover:text-danger"
+                          onClick={() => remove.mutate(it.id)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <Badge variant="warning">
-                    {it.subject || "Verifica orale"}
-                  </Badge>
-                  {it.grade != null && (
-                    <Badge variant="success">Voto: {it.grade}</Badge>
-                  )}
-                </div>
-                <div className="mt-1 truncate font-semibold">
-                  {it.topic || "Argomento da definire"}
-                </div>
-                <div className="text-xs text-muted-fg">
-                  {it.class_name} · {it.student_name || "Per tutta la classe"} ·
-                  con {it.teacher_name || "—"}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="font-mono text-sm text-amber-300">
-                  {format(parseISO(it.scheduled_for), "d MMM HH:mm", {
-                    locale: itLocale,
-                  })}
-                </div>
-                <div className="text-[11px] text-muted-fg">
-                  {isAfter(parseISO(it.scheduled_for), new Date())
-                    ? "imminente"
-                    : "passato"}
-                </div>
-              </div>
-              {isTeacher && (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="opacity-0 group-hover:opacity-100 text-muted-fg hover:text-danger"
-                  onClick={() => remove.mutate(it.id)}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              )}
-            </motion.div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -205,8 +230,8 @@ function SuggestFreeDayDialog() {
         <div className="space-y-3">
           <p className="text-xs text-muted-fg">
             L’AI analizza il carico della settimana (compiti, verifiche,
-            interrogazioni) e propone il giorno più leggero per programmare
-            una nuova interrogazione.
+            interrogazioni) e propone il giorno più leggero per programmare una
+            nuova interrogazione.
           </p>
           <div className="space-y-1.5">
             <Label>Classe</Label>
@@ -281,6 +306,8 @@ function SuggestFreeDayDialog() {
 
 function NewInterrogationDialog() {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     class_id: "",
@@ -291,6 +318,7 @@ function NewInterrogationDialog() {
       nextSchoolDay(new Date(Date.now() + 7 * 86400_000)),
       "yyyy-MM-dd'T'HH:mm",
     ),
+    teacher_id: "",
   });
 
   const dateReason = getNonSchoolReason(form.scheduled_for);
@@ -304,9 +332,22 @@ function NewInterrogationDialog() {
   const { data: teacherSubjects = [] } = useTeacherSubjects();
   const subjectMap = buildSubjectMap(teacherSubjects);
 
+  const { data: allTeachers = [] } = useQuery({
+    queryKey: ["teachers-list"],
+    queryFn: async () =>
+      (await api.get("/users", { params: { role: "teacher" } })).data.users ||
+      [],
+    enabled: open && isAdmin,
+  });
+
   const handleClassChange = (classId) => {
-    const subj = subjectMap[classId] || "";
-    setForm((f) => ({ ...f, class_id: classId, student_id: "", subject: subj }));
+    const subj = isAdmin ? "" : subjectMap[classId] || "";
+    setForm((f) => ({
+      ...f,
+      class_id: classId,
+      student_id: "",
+      subject: subj,
+    }));
   };
 
   const { data: classDetail } = useQuery({
@@ -396,16 +437,17 @@ function NewInterrogationDialog() {
               <Label>Materia</Label>
               <Input
                 value={form.subject}
-                readOnly={!!subjectMap[form.class_id]}
+                readOnly={!isAdmin && !!subjectMap[form.class_id]}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, subject: e.target.value }))
                 }
                 className={cn(
-                  !!subjectMap[form.class_id] &&
+                  !isAdmin &&
+                    !!subjectMap[form.class_id] &&
                     "bg-elevated/60 text-muted-fg cursor-not-allowed",
                 )}
               />
-              {!!subjectMap[form.class_id] && (
+              {!isAdmin && !!subjectMap[form.class_id] && (
                 <p className="text-[10px] text-muted-fg">
                   Materia assegnata per questa classe
                 </p>
@@ -428,6 +470,25 @@ function NewInterrogationDialog() {
               )}
             </div>
           </div>
+          {isAdmin && (
+            <div className="space-y-1.5">
+              <Label>Docente</Label>
+              <select
+                value={form.teacher_id}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, teacher_id: e.target.value }))
+                }
+                className="flex h-10 w-full rounded-md border border-border bg-elevated/40 px-3 text-sm"
+              >
+                <option value="">— Seleziona docente —</option>
+                {allTeachers.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label>Argomento</Label>
             <Textarea

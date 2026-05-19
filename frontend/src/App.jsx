@@ -19,6 +19,7 @@ import Interrogations from "@/pages/Interrogations";
 import Absences from "@/pages/Absences";
 import Notifications from "@/pages/Notifications";
 import Classes from "@/pages/Classes";
+import Schedule from "@/pages/Schedule";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="/absences" element={<Absences />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/schedule" element={<Schedule />} />
 
           {/* Docente / Admin */}
           <Route

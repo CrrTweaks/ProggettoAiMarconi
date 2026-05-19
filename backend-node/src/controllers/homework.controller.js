@@ -10,12 +10,16 @@ import {
 export const list = asyncHandler(async (req, res) => {
   const { class_id, subject, from, to } = req.query;
   const params = [req.user.id];
-  let where = `h.deleted_at IS NULL
-    AND h.class_id IN (
+  let where = `h.deleted_at IS NULL`;
+  if (req.user.role === "admin") {
+    where += ` AND h.class_id IN (SELECT id FROM classes WHERE deleted_at IS NULL AND $1::uuid=$1::uuid)`;
+  } else {
+    where += ` AND h.class_id IN (
       SELECT c.id FROM classes c
       LEFT JOIN class_members m ON m.class_id=c.id AND m.user_id=$1
       WHERE c.deleted_at IS NULL AND (c.owner_id=$1 OR m.user_id IS NOT NULL)
     )`;
+  }
   if (class_id) {
     params.push(class_id);
     where += ` AND h.class_id=$${params.length}`;
@@ -69,7 +73,10 @@ export const create = asyncHandler(async (req, res) => {
       [req.user.id, class_id, subject],
     );
     if (!subjCheck[0]) {
-      throw new HttpError(403, "Non sei assegnato a insegnare questa materia nella classe selezionata");
+      throw new HttpError(
+        403,
+        "Non sei assegnato a insegnare questa materia nella classe selezionata",
+      );
     }
   }
 
@@ -83,7 +90,9 @@ export const create = asyncHandler(async (req, res) => {
       subject || null,
       due_date,
       priority || 1,
-      req.user.id,
+      req.user.role === "admin" && req.body.assigned_by
+        ? req.body.assigned_by
+        : req.user.id,
     ],
   );
   // Notifica i membri della classe
@@ -115,7 +124,8 @@ export const update = asyncHandler(async (req, res) => {
 
   if (req.user.role === "teacher" && subject) {
     const { rows: r } = await query(
-      `SELECT class_id FROM homework WHERE id=$1`, [req.params.id],
+      `SELECT class_id FROM homework WHERE id=$1`,
+      [req.params.id],
     );
     const { rows: subjCheck } = await query(
       `SELECT 1 FROM schedules
@@ -124,7 +134,10 @@ export const update = asyncHandler(async (req, res) => {
       [req.user.id, r[0].class_id, subject],
     );
     if (!subjCheck[0]) {
-      throw new HttpError(403, "Non sei assegnato a insegnare questa materia nella classe selezionata");
+      throw new HttpError(
+        403,
+        "Non sei assegnato a insegnare questa materia nella classe selezionata",
+      );
     }
   }
 
