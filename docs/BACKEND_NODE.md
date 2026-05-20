@@ -203,6 +203,7 @@ File: `@/home/crr/Desktop/ProgettoPY/backend-node/src/controllers/calendar.contr
 | `GET`  | `/calendar/workload` | Carico settimanale: per ogni giorno conta compiti, verifiche e interrogazioni. |
 
 L'endpoint `events` usa `UNION ALL` per mescolare le 4 tabelle e restituire un formato omogeneo con `type`, `start_at`, `end_at`.
+> **Nota Admin**: Per gli utenti con ruolo `admin`, il controller ignora i controlli di appartenenza alle classi (`class_members`) e restituisce gli eventi di **tutte** le classi dell'istituto.
 
 ### Homework (`/homework`)
 
@@ -210,7 +211,7 @@ File: `@/home/crr/Desktop/ProgettoPY/backend-node/src/controllers/homework.contr
 
 | Metodo | Route | Descrizione |
 |--------|-------|-------------|
-| `GET`  | `/homework` | Lista compiti visibili. Filtri: `class_id`, `from`, `to`. |
+| `GET`  | `/homework` | Lista compiti visibili (gli Admin vedono tutto bypassando i filtri di membership). Filtri: `class_id`, `from`, `to`. |
 | `POST` | `/homework` | Crea compito. Invia notifica push+socket agli studenti della classe. |
 | `PATCH`| `/homework/:id` | Aggiorna (usa `COALESCE` per partial update). |
 | `DELETE`| `/homework/:id` | Soft delete (`deleted_at`). |
@@ -221,7 +222,7 @@ File: `@/home/crr/Desktop/ProgettoPY/backend-node/src/controllers/lesson.control
 
 | Metodo | Route | Descrizione |
 |--------|-------|-------------|
-| `GET`  | `/lessons` | Lista lezioni con join su classe e docente. |
+| `GET`  | `/lessons` | Lista lezioni con join su classe e docente (gli Admin vedono tutto). |
 | `POST` | `/lessons` | Crea lezione (`teacher_id` = utente corrente). |
 | `PATCH`| `/lessons/:id` | Aggiorna lezione. |
 | `DELETE`| `/lessons/:id` | Elimina fisicamente. |
@@ -243,7 +244,7 @@ File: `@/home/crr/Desktop/ProgettoPY/backend-node/src/controllers/exam.controlle
 
 | Metodo | Route | Descrizione |
 |--------|-------|-------------|
-| `GET`  | `/exams` | Lista verifiche visibili. Filtri: `class_id`, `from`, `to`. |
+| `GET`  | `/exams` | Lista verifiche visibili (gli Admin vedono tutto). Filtri: `class_id`, `from`, `to`. |
 | `POST` | `/exams` | Crea verifica (`teacher_id` = corrente). Invia notifica agli studenti. |
 | `PATCH`| `/exams/:id` | Aggiorna verifica. |
 | `DELETE`| `/exams/:id` | Elimina fisicamente. |
@@ -254,7 +255,7 @@ File: `@/home/crr/Desktop/ProgettoPY/backend-node/src/controllers/interrogation.
 
 | Metodo | Route | Descrizione |
 |--------|-------|-------------|
-| `GET`  | `/interrogations` | Lista interrogazioni. Studenti vedono solo le proprie. Filtri: `class_id`, `student_id`, `from`, `to`. |
+| `GET`  | `/interrogations` | Lista interrogazioni. Studenti vedono solo le proprie. Admin vedono tutto. Filtri: `class_id`, `student_id`, `from`, `to`. |
 | `POST` | `/interrogations` | Crea interrogazione. Se `student_id` è presente, notifica lo studente. |
 | `PATCH`| `/interrogations/:id` | Aggiorna (incluso `grade` e `notes`). |
 | `DELETE`| `/interrogations/:id` | Elimina fisicamente. |
