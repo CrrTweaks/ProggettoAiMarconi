@@ -74,25 +74,28 @@ export default function Sidebar() {
       <div className="flex h-full flex-col">
         {/* Logo */}
         <div className="flex h-16 items-center justify-between px-4 border-b border-border/40">
-          <NavLink to="/" className="flex items-center gap-2 overflow-hidden">
-            <div className="grid size-9 place-items-center rounded-lg bg-gradient-to-br from-primary to-accent shadow-glow">
-              <Sparkles className="size-5 text-white" />
-            </div>
-            <AnimatePresence initial={false}>
-              {sidebarOpen && (
-                <motion.div
-                  initial={{ opacity: 0, x: -8 }}
+          <NavLink to="/" className="flex items-center overflow-hidden">
+            <AnimatePresence mode="wait">
+              {sidebarOpen ? (
+                <motion.img
+                  key="logo-open"
+                  initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -8 }}
-                  className="flex flex-col"
-                >
-                  <span className="text-sm font-bold tracking-tight">
-                    Scuola AI
-                  </span>
-                  <span className="text-[10px] uppercase tracking-widest text-muted-fg">
-                    Workspace
-                  </span>
-                </motion.div>
+                  exit={{ opacity: 0, x: -10 }}
+                  src="/logo.png"
+                  alt="edu c<3re"
+                  className="h-11 w-auto object-contain"
+                />
+              ) : (
+                <motion.img
+                  key="logo-collapsed"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  src="/logo.png"
+                  alt="edu c<3re"
+                  className="h-8 w-auto object-contain mx-auto"
+                />
               )}
             </AnimatePresence>
           </NavLink>

@@ -28,7 +28,7 @@ export default function Login() {
   };
 
   return (
-    <AuthLayout title="Bentornato" subtitle="Accedi al tuo Workspace Scolastico AI">
+    <AuthLayout title="Bentornato" subtitle={"Accedi a edu c<3re"}>
       <form onSubmit={submit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -129,18 +129,8 @@ export function AuthLayout({ title, subtitle, children }) {
           animate={{ opacity: 1, x: 0 }}
           className="hidden lg:flex flex-col justify-between p-12"
         >
-          <Link to="/" className="flex items-center gap-3">
-            <div className="grid size-11 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-glow">
-              <Sparkles className="size-6 text-white" />
-            </div>
-            <div>
-              <div className="text-lg font-bold tracking-tight">
-                Workspace Scolastico AI
-              </div>
-              <div className="text-xs text-muted-fg uppercase tracking-widest">
-                Piattaforma Premium
-              </div>
-            </div>
+          <Link to="/" className="flex items-center">
+            <img src="/logo.png" alt="edu c<3re" className="h-24 w-auto object-contain" />
           </Link>
 
           <div className="space-y-4 max-w-md">
@@ -172,7 +162,7 @@ export function AuthLayout({ title, subtitle, children }) {
           </div>
 
           <div className="text-xs text-muted-fg">
-            © 2026 Workspace Scolastico AI · Realizzato con React, FastAPI e Ollama
+            © 2026 edu c{"<"}3re · Realizzato con React, FastAPI e Ollama
           </div>
         </motion.div>
 
@@ -183,13 +173,8 @@ export function AuthLayout({ title, subtitle, children }) {
             animate={{ opacity: 1, y: 0 }}
             className="w-full max-w-md glass-strong rounded-2xl p-8 shadow-2xl ring-1 ring-white/5"
           >
-            <div className="mb-6 lg:hidden flex items-center gap-3">
-              <div className="grid size-10 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-glow">
-                <Sparkles className="size-5 text-white" />
-              </div>
-              <div className="font-bold tracking-tight">
-                Workspace Scolastico AI
-              </div>
+            <div className="mb-6 lg:hidden flex items-center">
+              <img src="/logo.png" alt="edu c<3re" className="h-16 w-auto object-contain" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
             {subtitle && (

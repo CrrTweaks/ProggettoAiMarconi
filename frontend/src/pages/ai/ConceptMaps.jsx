@@ -209,72 +209,188 @@ export default function ConceptMaps() {
 }
 
 function buildLayout(nodes, edges) {
-  // Layout radiale: la radice al centro, gli altri su anelli concentrici
-  const childCount = new Map();
-  edges.forEach((e) => childCount.set(e.target, childCount.get(e.target) || 0));
-  const incoming = new Map();
-  edges.forEach((e) => {
-    if (!incoming.has(e.target)) incoming.set(e.target, []);
-    incoming.get(e.target).push(e.source);
+  if (!nodes || nodes.length === 0) return { rfNodes: [], rfEdges: [] };
+
+  const root = nodes[0]; // The root node
+  
+  // 1. Build adjacency list of children in a tree structure (avoiding cycles)
+  const adj = new Map();
+  nodes.forEach(n => adj.set(n.id, []));
+  const visited = new Set([root.id]);
+  const nodeDepths = new Map();
+  nodeDepths.set(root.id, 0);
+  
+  const queue = [root.id];
+  while (queue.length > 0) {
+    const parentId = queue.shift();
+    const parentDepth = nodeDepths.get(parentId);
+    
+    edges.forEach(e => {
+      if (e.source === parentId && !visited.has(e.target)) {
+        visited.add(e.target);
+        nodeDepths.set(e.target, parentDepth + 1);
+        adj.get(parentId).push(e.target);
+        queue.push(e.target);
+      }
+    });
+  }
+  
+  // Handle orphans (disconnected nodes)
+  nodes.forEach(n => {
+    if (!visited.has(n.id)) {
+      adj.get(root.id).push(n.id);
+      visited.add(n.id);
+      nodeDepths.set(n.id, 1);
+    }
   });
 
-  const root = nodes[0];
+  // 2. Position nodes using Hierarchical Radial Tree Layout
   const positioned = new Map();
-  positioned.set(root.id, { x: 0, y: 0 });
-
-  const remaining = nodes.filter((n) => n.id !== root.id);
-  const ringSize = Math.ceil(remaining.length);
-  const radius = 320;
-  remaining.forEach((n, i) => {
-    const angle = (i / ringSize) * Math.PI * 2;
-    positioned.set(n.id, {
+  
+  function layoutNode(nodeId, depth, minAngle, maxAngle) {
+    const children = adj.get(nodeId) || [];
+    const angle = (minAngle + maxAngle) / 2;
+    
+    // Radius increases with depth: 0, 180, 320, 460...
+    const radius = depth === 0 ? 0 : 160 + depth * 140;
+    
+    positioned.set(nodeId, {
       x: Math.cos(angle) * radius,
       y: Math.sin(angle) * radius,
     });
-  });
+    
+    if (children.length > 0) {
+      const angleStep = (maxAngle - minAngle) / children.length;
+      children.forEach((childId, index) => {
+        const childMin = minAngle + index * angleStep;
+        const childMax = childMin + angleStep;
+        layoutNode(childId, depth + 1, childMin, childMax);
+      });
+    }
+  }
 
+  // Start positioning from the root
+  layoutNode(root.id, 0, 0, Math.PI * 2);
+
+  // 3. Map nodes to React Flow format with stunning premium glass styles
   const rfNodes = nodes.map((n, i) => {
     const isRoot = i === 0 || n.type === "root";
+    const depth = nodeDepths.get(n.id) || 0;
+    
+    let nodeStyle = {};
+    if (isRoot) {
+      // Depth 0: Core Nucleus
+      nodeStyle = {
+        background: "linear-gradient(135deg, hsl(244 97% 66%), hsl(290 85% 60%))",
+        color: "#ffffff",
+        border: "1px solid hsl(290 85% 66% / 0.8)",
+        borderRadius: 16,
+        padding: "12px 18px",
+        fontSize: 14,
+        fontWeight: 800,
+        boxShadow: "0 0 35px hsl(244 97% 66% / 0.45)",
+        minWidth: 130,
+        textAlign: "center",
+        textTransform: "uppercase",
+        letterSpacing: "0.05em",
+        borderLeft: "6px solid hsl(188 95% 58%)",
+      };
+    } else if (depth === 1) {
+      // Depth 1: Major Branches
+      nodeStyle = {
+        background: "linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.85))",
+        color: "#f8fafc",
+        border: "1px solid hsl(205 100% 60% / 0.45)",
+        borderRadius: 12,
+        padding: "10px 16px",
+        fontSize: 13,
+        fontWeight: 600,
+        boxShadow: "0 0 15px hsl(205 100% 60% / 0.1), 0 8px 30px -10px rgba(0, 0, 0, 0.5)",
+        minWidth: 120,
+        textAlign: "center",
+        borderLeft: "4px solid hsl(205 100% 60%)",
+        backdropFilter: "blur(12px)",
+      };
+    } else {
+      // Depth 2+: Sub-concepts / leaves
+      nodeStyle = {
+        background: "linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.7))",
+        color: "#cbd5e1",
+        border: "1px solid rgba(255, 255, 255, 0.08)",
+        borderRadius: 10,
+        padding: "8px 12px",
+        fontSize: 12,
+        fontWeight: 500,
+        boxShadow: "0 4px 20px -8px rgba(0, 0, 0, 0.4)",
+        minWidth: 100,
+        textAlign: "center",
+        borderLeft: "3px solid hsl(188 95% 58% / 0.6)",
+        backdropFilter: "blur(8px)",
+      };
+    }
+
     return {
       id: n.id,
       data: { label: n.label },
       position: positioned.get(n.id) || { x: 0, y: 0 },
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
-      style: {
-        background: isRoot
-          ? "linear-gradient(135deg, hsl(205 100% 60% / .25), hsl(188 95% 58% / .25))"
-          : "hsl(222 35% 11%)",
-        color: "#e6f1ff",
-        border: isRoot
-          ? "1px solid hsl(205 100% 60% / .6)"
-          : "1px solid hsl(222 25% 22%)",
-        borderRadius: 14,
-        padding: "10px 14px",
-        fontSize: 13,
-        fontWeight: 600,
-        boxShadow: isRoot
-          ? "0 0 30px hsl(205 100% 60% / .35)"
-          : "0 4px 16px -8px hsl(222 47% 4% / .8)",
-        minWidth: 110,
-        textAlign: "center",
-      },
+      style: nodeStyle,
     };
   });
 
-  const rfEdges = edges.map((e, i) => ({
-    id: `e${i}`,
-    source: e.source,
-    target: e.target,
-    label: e.label,
-    type: "smoothstep",
-    animated: true,
-    markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(205 100% 60%)" },
-    style: { stroke: "hsl(205 100% 60% / .6)", strokeWidth: 1.5 },
-    labelStyle: { fill: "hsl(215 16% 65%)", fontSize: 11, fontWeight: 500 },
-    labelBgPadding: [4, 2],
-    labelBgStyle: { fill: "hsl(222 35% 11%)", stroke: "hsl(222 25% 22%)" },
-  }));
+  // 4. Map edges with vibrant energy line styles based on connection depth
+  const rfEdges = edges.map((e, i) => {
+    const sourceDepth = nodeDepths.get(e.source) || 0;
+    
+    // Choose beautiful color themes for neon connections
+    let lineColor = "hsl(205 100% 60% / .6)"; // standard cyan
+    let arrowColor = "hsl(205 100% 60%)";
+    let glowShadow = "0 0 8px hsl(205 100% 60% / 0.3)";
+    
+    if (sourceDepth === 0) {
+      // Root to Level 1: Purple energy beam
+      lineColor = "hsl(270 95% 65% / .7)";
+      arrowColor = "hsl(270 95% 65%)";
+      glowShadow = "0 0 12px hsl(270 95% 65% / 0.4)";
+    } else if (sourceDepth === 1) {
+      // Level 1 to Level 2: Cyan energy beam
+      lineColor = "hsl(188 95% 58% / .65)";
+      arrowColor = "hsl(188 95% 58%)";
+      glowShadow = "0 0 10px hsl(188 95% 58% / 0.35)";
+    }
+
+    return {
+      id: `e${i}`,
+      source: e.source,
+      target: e.target,
+      label: e.label,
+      type: "smoothstep",
+      animated: true,
+      markerEnd: { 
+        type: MarkerType.ArrowClosed, 
+        color: arrowColor,
+      },
+      style: { 
+        stroke: lineColor, 
+        strokeWidth: sourceDepth === 0 ? 2.2 : 1.5,
+      },
+      labelStyle: { 
+        fill: "#e2e8f0", 
+        fontSize: 11, 
+        fontWeight: 600,
+        fontFamily: "Inter, sans-serif",
+      },
+      labelBgPadding: [6, 4],
+      labelBgStyle: { 
+        fill: "rgba(15, 23, 42, 0.95)", 
+        stroke: lineColor,
+        strokeWidth: 1,
+        rx: 6,
+        ry: 6,
+      },
+    };
+  });
 
   return { rfNodes, rfEdges };
 }
@@ -325,7 +441,7 @@ function FlowGraph({ data, onExport }) {
         fitViewOptions={{ padding: 0.25 }}
         proOptions={{ hideAttribution: true }}
       >
-        <Background color="hsl(222 25% 16%)" gap={18} />
+        <Background variant="dots" color="rgba(255, 255, 255, 0.08)" gap={16} size={1} />
         <MiniMap
           pannable
           zoomable
